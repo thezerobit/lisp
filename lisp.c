@@ -15,6 +15,17 @@ const TYPE_INT    = 4;
 
 typedef void * pointer;
 typedef unsigned long long uint64;
+typedef signed long long int64;
+
+/* nil == empty list */
+
+int is_nil (pointer p) {
+  return (TYPE_MASK & (uint64)p) == TYPE_NIL;
+}
+
+pointer new_nil() {
+  return (pointer)((uint64)NULL | TYPE_NIL);
+}
 
 /* Pair */
 
@@ -36,6 +47,8 @@ Pair get_pair(pointer p) {
 }
 
 pointer new_pair(pointer car, pointer cdr) {
+  assert(car);
+  assert(cdr);
   pointer p = GC_MALLOC(sizeof(struct pair));
   Pair cell = get_pair(p);
   cell->car = car;
@@ -63,29 +76,29 @@ void set_cdr(pointer p, pointer thing) {
   pair->cdr = thing;
 }
 
-int is_empty_list(pointer p) {
-  Pair pair = get_pair(p);
-  return pair->car == NULL && pair->cdr == NULL;
-}
-
 pointer reverse(pointer p) {
-  pointer last = NULL;
-  do {
+  pointer last = new_nil();
+  while(!is_nil(p)) {
     pointer next = new_pair(car(p), last);
     p = cdr(p);
     last = next;
-  } while (p != NULL);
+  }
   return last;
 }
 
-/* nil */
-
-int is_nil (pointer p) {
-  return (TYPE_MASK & (uint64)p) == TYPE_NIL;
-}
-
-pointer new_nil() {
-  return TYPE_NIL;
+int count(pointer p) {
+  assert(is_nil(p) || is_pair(p));
+  if(is_nil(p)) {
+    return 0;
+  }
+  int length = 0;
+  pointer n;
+  n = p;
+  do {
+    length++;
+    n = cdr(n);
+  } while (is_pair(n));
+  return length;
 }
 
 /* Symbol */
@@ -118,7 +131,7 @@ typedef struct {
   int type;
   union {
     void * data;
-    uint64 int_num;
+    int64 int_num;
   };
 } other;
 
@@ -138,7 +151,7 @@ int is_int(pointer p) {
   return is_other(p) && get_other(p)->type == TYPE_INT;
 }
 
-pointer new_int(uint64 num) {
+pointer new_int(int64 num) {
   Other o = (Other)GC_MALLOC(sizeof(other));
   /* printf("creating int: %llu \n", num); */
   o->type = TYPE_INT;
@@ -146,7 +159,7 @@ pointer new_int(uint64 num) {
   return (pointer)((uint64)o | TYPE_OTHER);
 }
 
-uint64 get_int(pointer p) {
+int64 get_int(pointer p) {
   assert(is_int);
   return get_other(p)->int_num;
 }
@@ -191,7 +204,7 @@ void skip_whitespace(read_pointer * rp) {
 
 pointer read_pair(read_pointer * rp) {
   /* placeholder */
-  return new_pair(NULL, NULL);
+  return new_nil();
 }
 
 pointer read_symbol(read_pointer * rp) {
@@ -205,12 +218,27 @@ pointer read_symbol(read_pointer * rp) {
   char * name = (char *)GC_MALLOC(length + 1);
   strncpy(name, start, length);
   name[length] = 0;
+  rp->loc = next;
+  rp->col += length;
   return new_symbol(name);
 }
 
 pointer read_number(read_pointer * rp) {
-  /* placeholder */
-  return new_int(0);
+  int length = 0;
+  const char * start = rp->loc;
+  const char * next = start;
+  while(is_numeric(*next)) {
+    length++;
+    next++;
+  }
+  char * name = (char *)GC_MALLOC(length + 1);
+  strncpy(name, start, length);
+  name[length] = 0;
+  rp->loc = next;
+  rp->col += length;
+  int64 num;
+  sscanf(name, "%lld", &num);
+  return new_int(num);
 }
 
 pointer read_next(read_pointer * rp) {
@@ -225,12 +253,13 @@ pointer read_next(read_pointer * rp) {
   } else if(is_numeric(next)) {
     return read_number(rp);
   }
+  return NULL;
 }
 
 pointer read_from_string(const char * input) {
   read_pointer r = {.loc = input, .line = 1, .col = 1};
   read_pointer * rp = &r;
-  pointer last_pair = NULL;
+  pointer last_pair = new_nil();
   pointer next_item;
   /* build a reverse list of elements read */
   while(next_item = read_next(rp)) {
@@ -249,17 +278,17 @@ void print_thing(pointer p) {
     do {
       print_thing(car(n));
       n = cdr(n);
-      if(n && !is_empty_list(n)) {
+      if(is_pair(n)) {
         printf(" ");
       }
-    } while (n);
+    } while (is_pair(n));
     printf(")");
   } else if(is_symbol(p)) {
     printf("%s", get_symbol(p)->name);
   } else if(is_int(p)) {
-    printf("%llu", get_int(p));
+    printf("%lld", get_int(p));
   } else if(is_nil(p)) {
-    printf("nil");
+    printf("()");
   }
 }
 
@@ -279,25 +308,40 @@ void what_is_it(pointer p) {
 
 int main() {
   printf("Hello, world\n");
-  pointer p = new_pair(NULL, NULL);
+  pointer p = new_nil();
   what_is_it(p);
   pointer s = new_symbol("foo");
   what_is_it(s);
   pointer i = new_int(100);
   what_is_it(i);
-  printf("The letter 'a': %d, 'z': %d, 'A': %d, 'Z': %d, '0': %d, '1': %d, '9': %d\n",
-      (int)'a', (int)'z', (int)'A', (int)'Z', (int)'0', (int)'1', (int)'9');
-  pointer thing1 = new_pair(NULL, NULL);
-  pointer thing2 = new_pair(new_int(100), NULL);
-  pointer thing3 = new_pair(new_int(100), new_pair(new_symbol("hello"), NULL));
-  pointer thing4 = new_pair(new_int(100), new_pair(NULL, NULL));
-  pointer thing5 = new_pair(new_int(100), new_pair(new_pair(NULL, NULL), NULL));
+  assert(100 == get_int(i));
+  pointer thing1 = new_nil();
+  assert(0 == count(thing1));
+  pointer thing2 = new_pair(new_int(100), new_nil());
+  assert(1 == count(thing2));
+  pointer thing3 = new_pair(new_int(100), new_pair(new_symbol("hello"), new_nil()));
+  assert(2 == count(thing3));
+  pointer thing4 = new_pair(new_int(100), new_nil());
+  assert(1 == count(thing4));
+  pointer thing5 = new_pair(new_int(100), new_pair(new_nil(), new_nil()));
+  assert(2 == count(thing5));
   print_thing(thing1);
   print_thing(thing2);
   print_thing(thing3);
   print_thing(thing4);
   print_thing(thing5);
   printf("\n");
+
+  const char * test_string = "this that 100";
+  pointer test = read_from_string(test_string);
+  print_thing(test);
+  printf("\n");
+
+  const char * test_empty = " ";
+  pointer test_nil = read_from_string(test_empty);
+  print_thing(test_nil);
+  printf("\n");
+
   return 0;
 }
 
