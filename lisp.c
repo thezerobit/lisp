@@ -202,10 +202,18 @@ void skip_whitespace(read_pointer * rp) {
   }
 }
 
-pointer read_pair(read_pointer * rp) {
-  /* placeholder */
-  return new_nil();
+int read_required(read_pointer * rp, char c) {
+  char actual = *(rp->loc);
+  assert(actual == c);
+  if(actual == c) {
+    rp->loc++;
+    rp->col++;
+    return 1;
+  }
+  return 0;
 }
+
+pointer read_pair(read_pointer * rp);
 
 pointer read_symbol(read_pointer * rp) {
   int length = 0;
@@ -254,6 +262,20 @@ pointer read_next(read_pointer * rp) {
     return read_number(rp);
   }
   return NULL;
+}
+
+pointer read_pair(read_pointer * rp) {
+  read_required(rp, '(');
+  pointer last_pair = new_nil();
+  pointer next_item;
+  /* build a reverse list of elements read */
+  while(next_item = read_next(rp)) {
+    last_pair = new_pair(next_item, last_pair);
+  }
+  /* reverse it */
+  pointer list = reverse(last_pair);
+  read_required(rp, ')');
+  return list;
 }
 
 pointer read_from_string(const char * input) {
@@ -337,9 +359,12 @@ int main() {
   print_thing(test);
   printf("\n");
 
-  const char * test_empty = " ";
-  pointer test_nil = read_from_string(test_empty);
+  pointer test_nil = read_from_string("");
   print_thing(test_nil);
+  printf("\n");
+
+  pointer test2 = read_from_string("this (that ) 100");
+  print_thing(test2);
   printf("\n");
 
   return 0;
