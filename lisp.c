@@ -214,7 +214,7 @@ int is_equal(pointer p, pointer o) {
   }
 }
 
-int test_is_equal() {
+void test_is_equal() {
   pointer i1 = new_int(99);
   pointer i2 = new_int(100);
   pointer i3 = new_int(99);
@@ -281,7 +281,7 @@ pointer lookup_env(pointer env, pointer sym) {
   }
 }
 
-int test_env() {
+void test_env() {
   pointer e1 = make_env();
   pointer e2 = add_env(e1, new_symbol("foo"), new_int(100));
   pointer e3 = add_env(e2, new_symbol("bar"), new_int(200));
@@ -293,6 +293,18 @@ int test_env() {
 }
 
 /* evaluate */
+
+pointer evaluate(pointer form, pointer env) {
+  if(is_symbol(form)) {
+    return lookup_env(env, form);
+  } else if(is_nil(form) || is_other(form)) {
+    return form;
+  } else { /* pair */
+    /* TODO: lookup special forms */
+    /* TODO: builtin functions/closures */
+    return form;
+  }
+}
 
 /* read */
 
