@@ -4,18 +4,22 @@
 #include <string.h>
 #include <assert.h>
 
-const TYPE_MASK   = 0b011;
+#define TYPE_MASK    (0b011)
 
-const TYPE_PAIR   = 0b000;
-const TYPE_NIL    = 0b001;
-const TYPE_SYMBOL = 0b010;
-const TYPE_OTHER  = 0b011;
+#define TYPE_PAIR    (0b000)
+#define TYPE_NIL     (0b001)
+#define TYPE_SYMBOL  (0b010)
+#define TYPE_OTHER   (0b011)
 
-const TYPE_INT    = 4;
+#define TYPE_INT     4;
 
 typedef void * pointer;
 typedef unsigned long long uint64;
 typedef signed long long int64;
+
+/* advanced declarations */
+
+void print_thing(pointer p);
 
 /* nil == empty list */
 
@@ -125,6 +129,15 @@ Symbol get_symbol(pointer p) {
   return (Symbol)((uint64)p & ~(uint64)TYPE_MASK);
 }
 
+int is_symbol_equal(pointer p, pointer o) {
+  /* Yeah, this is slow. Eventually symbols should be in a map and simple
+   * pointer comparison will do. Even later, due to determinism in lexical
+   * scoping, these will be in a stack and symbols will resolve to a
+   * stack offset ahead of time.
+   */
+  return strcmp(get_symbol(p)->name, get_symbol(o)->name) == 0;
+}
+
 /* Other */
 
 typedef struct {
@@ -145,6 +158,16 @@ Other get_other(pointer p) {
   return (Other)((uint64)p & ~(uint64)TYPE_MASK);
 }
 
+int is_other_equal(pointer p, pointer o) {
+  Other a = get_other(p);
+  Other b = get_other(o);
+  if(a->type != b->type) {
+    return 0;
+  } else {
+    return (a->int_num == b->int_num);
+  }
+}
+
 /* Int */
 
 int is_int(pointer p) {
@@ -163,6 +186,113 @@ int64 get_int(pointer p) {
   assert(is_int);
   return get_other(p)->int_num;
 }
+
+/* Equality */
+
+int is_equal(pointer p, pointer o) {
+  if(p == o) {
+    return 1;
+  } else if((TYPE_MASK & (uint64)p) != (TYPE_MASK & (uint64)o)) {
+    return 0;
+  } else {
+    switch(TYPE_MASK & (uint64)p) {
+      case TYPE_PAIR:
+        return is_equal(car(p), car(o)) && is_equal(cdr(p), cdr(o));
+        break;
+      case TYPE_NIL:
+        /* two nil values should have same pointer value already */
+        assert(0);
+        break;
+      case TYPE_SYMBOL:
+        return is_symbol_equal(p, o);
+        break;
+      case TYPE_OTHER:
+      default:
+        return is_other_equal(p, o);
+        break;
+    }
+  }
+}
+
+int test_is_equal() {
+  pointer i1 = new_int(99);
+  pointer i2 = new_int(100);
+  pointer i3 = new_int(99);
+  pointer s1 = new_symbol("foo");
+  pointer s2 = new_symbol("bar");
+  pointer s3 = new_symbol("foo");
+  pointer n1 = new_nil();
+  pointer n2 = new_nil();
+  pointer p1 = new_pair(new_int(1), new_nil());
+  pointer p2 = new_pair(new_int(1), new_nil());
+  pointer p3 = new_pair(new_int(1), new_pair(new_int(2), new_nil()));
+  pointer p4 = new_pair(new_int(1), new_pair(new_int(2), new_nil()));
+  pointer p5 = new_pair(new_int(1), new_pair(new_int(3), new_nil()));
+
+  assert( is_equal(i1, i1));
+  assert(!is_equal(i1, i2));
+  assert( is_equal(i1, i3));
+  assert(!is_equal(i2, i3));
+
+  assert( is_equal(s1, s1));
+  assert(!is_equal(s1, s2));
+  assert( is_equal(s1, s3));
+  assert(!is_equal(s2, s3));
+
+  assert(!is_equal(i1, s1));
+  assert(!is_equal(i1, n1));
+  assert(!is_equal(s1, n1));
+  assert(!is_equal(s1, p1));
+  assert(!is_equal(i1, p1));
+  assert(!is_equal(n1, p1));
+
+  assert( is_equal(n1, n2));
+
+  assert( is_equal(p1, p1));
+  assert( is_equal(p1, p2));
+  assert(!is_equal(p1, p3));
+  assert(!is_equal(p1, p4));
+  assert(!is_equal(p1, p5));
+  assert( is_equal(p3, p4));
+  assert(!is_equal(p4, p5));
+}
+
+/* env */
+
+pointer make_env() {
+  return new_nil();
+}
+
+pointer add_env(pointer env, pointer sym, pointer value) {
+  return new_pair(new_pair(sym, new_pair(value, new_nil())), env);
+}
+
+pointer lookup_env(pointer env, pointer sym) {
+  if(is_pair(env)) {
+    pointer first = car(env);
+    if(is_symbol_equal(car(first), sym)) {
+      return car(cdr(first));
+    } else {
+      return lookup_env(cdr(env), sym);
+    }
+  } else {
+    assert(0);
+    return NULL;
+  }
+}
+
+int test_env() {
+  pointer e1 = make_env();
+  pointer e2 = add_env(e1, new_symbol("foo"), new_int(100));
+  pointer e3 = add_env(e2, new_symbol("bar"), new_int(200));
+  pointer e4 = add_env(e2, new_symbol("foo"), new_int(300));
+  assert(is_equal(new_int(100), lookup_env(e2, new_symbol("foo"))));
+  assert(is_equal(new_int(200), lookup_env(e3, new_symbol("bar"))));
+  assert(is_equal(new_int(100), lookup_env(e3, new_symbol("foo"))));
+  assert(is_equal(new_int(300), lookup_env(e4, new_symbol("foo"))));
+}
+
+/* evaluate */
 
 /* read */
 
@@ -292,6 +422,8 @@ pointer read_from_string(const char * input) {
   return list;
 }
 
+/* print */
+
 void print_thing(pointer p) {
   pointer n;
   if(is_pair(p)) {
@@ -354,8 +486,7 @@ int main() {
   print_thing(thing5);
   printf("\n");
 
-  const char * test_string = "this that 100";
-  pointer test = read_from_string(test_string);
+  pointer test = read_from_string("this that 100");
   print_thing(test);
   printf("\n");
 
@@ -366,6 +497,10 @@ int main() {
   pointer test2 = read_from_string("this (that ) 100");
   print_thing(test2);
   printf("\n");
+
+  test_is_equal();
+  test_env();
+  printf("Test, success!\n");
 
   return 0;
 }
