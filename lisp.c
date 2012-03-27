@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <stdint.h>
+#include <inttypes.h>
 
 #define TYPE_MASK    (0b011)
 
@@ -14,8 +16,6 @@
 #define TYPE_INT     4;
 
 typedef void * pointer;
-typedef unsigned long long uint64;
-typedef signed long long int64;
 
 /* advanced declarations */
 
@@ -24,11 +24,11 @@ void print_thing(pointer p);
 /* nil == empty list */
 
 int is_nil (pointer p) {
-  return (TYPE_MASK & (uint64)p) == TYPE_NIL;
+  return (TYPE_MASK & (uint64_t)p) == TYPE_NIL;
 }
 
 pointer new_nil() {
-  return (pointer)((uint64)NULL | TYPE_NIL);
+  return (pointer)((uint64_t)NULL | TYPE_NIL);
 }
 
 /* Pair */
@@ -41,7 +41,7 @@ struct pair {
 typedef struct pair * Pair;
 
 int is_pair(pointer p) {
-  return p && (TYPE_MASK & (uint64)p) == TYPE_PAIR;
+  return p && (TYPE_MASK & (uint64_t)p) == TYPE_PAIR;
 }
 
 Pair get_pair(pointer p) {
@@ -114,7 +114,7 @@ struct symbol {
 typedef struct symbol * Symbol;
 
 int is_symbol(pointer p) {
-  return (TYPE_MASK & (uint64)p) == TYPE_SYMBOL;
+  return (TYPE_MASK & (uint64_t)p) == TYPE_SYMBOL;
 }
 
 pointer new_symbol(char * name) {
@@ -122,11 +122,11 @@ pointer new_symbol(char * name) {
   /* sym->name = GC_MALLOC(strlen(name) + 1); */
   /* strcpy(sym->name, name); */
   sym->name = name;
-  return (pointer)((uint64)sym | TYPE_SYMBOL);
+  return (pointer)((uint64_t)sym | TYPE_SYMBOL);
 }
 
 Symbol get_symbol(pointer p) {
-  return (Symbol)((uint64)p & ~(uint64)TYPE_MASK);
+  return (Symbol)((uint64_t)p & ~(uint64_t)TYPE_MASK);
 }
 
 int is_symbol_equal(pointer p, pointer o) {
@@ -144,18 +144,18 @@ typedef struct {
   int type;
   union {
     void * data;
-    int64 int_num;
+    int64_t int_num;
   };
 } other;
 
 typedef other * Other;
 
 int is_other(pointer p) {
-  return (TYPE_MASK & (uint64)p) == TYPE_OTHER;
+  return (TYPE_MASK & (uint64_t)p) == TYPE_OTHER;
 }
 
 Other get_other(pointer p) {
-  return (Other)((uint64)p & ~(uint64)TYPE_MASK);
+  return (Other)((uint64_t)p & ~(uint64_t)TYPE_MASK);
 }
 
 int is_other_equal(pointer p, pointer o) {
@@ -174,15 +174,15 @@ int is_int(pointer p) {
   return is_other(p) && get_other(p)->type == TYPE_INT;
 }
 
-pointer new_int(int64 num) {
+pointer new_int(int64_t num) {
   Other o = (Other)GC_MALLOC(sizeof(other));
   /* printf("creating int: %llu \n", num); */
   o->type = TYPE_INT;
   o->int_num = num;
-  return (pointer)((uint64)o | TYPE_OTHER);
+  return (pointer)((uint64_t)o | TYPE_OTHER);
 }
 
-int64 get_int(pointer p) {
+int64_t get_int(pointer p) {
   assert(is_int);
   return get_other(p)->int_num;
 }
@@ -192,10 +192,10 @@ int64 get_int(pointer p) {
 int is_equal(pointer p, pointer o) {
   if(p == o) {
     return 1;
-  } else if((TYPE_MASK & (uint64)p) != (TYPE_MASK & (uint64)o)) {
+  } else if((TYPE_MASK & (uint64_t)p) != (TYPE_MASK & (uint64_t)o)) {
     return 0;
   } else {
-    switch(TYPE_MASK & (uint64)p) {
+    switch(TYPE_MASK & (uint64_t)p) {
       case TYPE_PAIR:
         return is_equal(car(p), car(o)) && is_equal(cdr(p), cdr(o));
         break;
@@ -386,8 +386,8 @@ pointer read_number(read_pointer * rp) {
   name[length] = 0;
   rp->loc = next;
   rp->col += length;
-  int64 num;
-  sscanf(name, "%lld", &num);
+  int64_t num;
+  sscanf(name, "%" SCNd64, &num);
   return new_int(num);
 }
 
@@ -452,7 +452,7 @@ void print_thing(pointer p) {
   } else if(is_symbol(p)) {
     printf("%s", get_symbol(p)->name);
   } else if(is_int(p)) {
-    printf("%lld", get_int(p));
+    printf("%" PRId64, get_int(p));
   } else if(is_nil(p)) {
     printf("()");
   }
