@@ -21,6 +21,10 @@ typedef void * pointer;
 /* advanced declarations */
 
 void print_thing(pointer p);
+pointer ff_print(pointer args);
+
+pointer build_core_env();
+pointer read_from_string(const char * input);
 
 /* nil == empty list */
 
@@ -146,6 +150,7 @@ typedef struct {
   union {
     void * data;
     int64_t int_num;
+    pointer (*ffunc)(pointer);
   };
 } other;
 
@@ -184,8 +189,32 @@ pointer new_int(int64_t num) {
 }
 
 int64_t get_int(pointer p) {
-  assert(is_int);
+  assert(is_int(p));
   return get_other(p)->int_num;
+}
+
+/* Func */
+
+int is_func(pointer p) {
+  return is_other(p) && get_other(p)->type == TYPE_FUNC;
+}
+
+pointer new_func(pointer (*f)(pointer)) {
+  Other o = (Other)GC_MALLOC(sizeof(other));
+  o->type = TYPE_FUNC;
+  o->ffunc = f;
+  return (pointer)((uint64_t)o | TYPE_OTHER);
+}
+
+pointer call_func(pointer f, pointer arglist) {
+  return (*get_other(f)->ffunc)(arglist);
+}
+
+void test_func() {
+  pointer print = new_func(ff_print);
+  printf("Should print (): ");
+  call_func(print, new_pair(new_nil(), new_nil()));
+  printf("\n");
 }
 
 /* Equality */
@@ -337,16 +366,39 @@ void test_env() {
 
 /* evaluate */
 
+pointer evaluate(pointer form, pointer env);
+pointer evaluate_list(pointer args, pointer env);
+
+pointer evaluate_list(pointer args, pointer env) {
+  if(is_pair(args)) {
+    return new_pair(evaluate(car(args), env), evaluate_list(cdr(args), env));
+  } else {
+    return new_nil();
+  }
+}
+
 pointer evaluate(pointer form, pointer env) {
   if(is_symbol(form)) {
     return lookup_env(env, form);
   } else if(is_nil(form) || is_other(form)) {
     return form;
   } else { /* pair */
-    /* TODO: lookup special forms */
-    /* TODO: builtin functions/closures */
+    pointer first = evaluate(car(form), env);
+    assert(is_func(first));
+    if(is_func(first)) {
+      return call_func(first, evaluate_list(cdr(form), env));
+    }
+    /* TODO: lookup macros / special forms */
     return form;
   }
+}
+
+void test_evaluate() {
+  pointer env = build_core_env();
+  pointer forms = read_from_string("(print 100)");
+  printf("Should print 100: ");
+  evaluate(car(forms), env);
+  printf("\n");
 }
 
 /* read */
@@ -463,6 +515,9 @@ pointer read_pair(read_pointer * rp) {
   return list;
 }
 
+/**
+ * Reads a series of forms into a list.
+ */
 pointer read_from_string(const char * input) {
   read_pointer r = {.loc = input, .line = 1, .col = 1};
   read_pointer * rp = &r;
@@ -499,6 +554,37 @@ void print_thing(pointer p) {
   } else if(is_nil(p)) {
     printf("()");
   }
+}
+
+pointer ff_print(pointer args) {
+  pointer next = args;
+  while(1) {
+    if(is_pair(next)) {
+      print_thing(car(next));
+      next = cdr(next);
+      if(is_pair(next)) {
+        printf(" ");
+      }
+    } else {
+      break;
+    }
+  }
+  return new_nil();
+}
+
+pointer ff_println(pointer args) {
+  pointer ret_val = ff_print(args);
+  printf("\n");
+  return ret_val;
+}
+
+/* core env */
+
+pointer build_core_env() {
+  pointer env = make_env();
+  env = add_env(env, new_symbol("print"), new_func(ff_print));
+  env = add_env(env, new_symbol("println"), new_func(ff_println));
+  return env;
 }
 
 /* the rest */
@@ -556,6 +642,8 @@ int main() {
   test_is_equal();
   test_map();
   test_env();
+  test_func();
+  test_evaluate();
   printf("Test, success!\n");
 
   return 0;
