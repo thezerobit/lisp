@@ -14,6 +14,7 @@
 #define TYPE_OTHER   (0b011)
 
 #define TYPE_INT     4;
+#define TYPE_FUNC    5;
 
 typedef void * pointer;
 
@@ -255,6 +256,48 @@ void test_is_equal() {
   assert(!is_equal(p1, p5));
   assert( is_equal(p3, p4));
   assert(!is_equal(p4, p5));
+}
+
+/* functional map
+ *
+ * First rendition will just be built with lists, 'cause I'm lazy.
+ */
+
+pointer new_map() {
+  return new_nil();
+}
+
+pointer assoc(pointer map, pointer sym, pointer value) {
+  return new_pair(new_pair(sym, new_pair(value, new_nil())), map);
+}
+
+pointer dissoc(pointer map, pointer sym) {
+  return assoc(map, sym, new_nil());
+}
+
+pointer get(pointer map, pointer sym) {
+  if(is_pair(map)) {
+    pointer first = car(map);
+    if(is_equal(car(first), sym)) {
+      return car(cdr(first));
+    } else {
+      return get(cdr(map), sym);
+    }
+  } else {
+    return new_nil();
+  }
+}
+
+void test_map() {
+  pointer m1 = new_map();
+  pointer m2 = assoc(m1, new_symbol("foo"), new_int(100));
+  pointer m3 = assoc(m2, new_int(2), new_int(200));
+  pointer m4 = assoc(m2, new_symbol("foo"), new_int(300));
+  assert(is_equal(new_int(100), get(m2, new_symbol("foo"))));
+  assert(is_equal(new_int(200), get(m3, new_int(2))));
+  assert(is_equal(new_int(100), get(m3, new_symbol("foo"))));
+  assert(is_equal(new_int(300), get(m4, new_symbol("foo"))));
+  assert(is_equal(new_nil(),    get(m4, new_symbol("baz"))));
 }
 
 /* env */
@@ -511,6 +554,7 @@ int main() {
   printf("\n");
 
   test_is_equal();
+  test_map();
   test_env();
   printf("Test, success!\n");
 
