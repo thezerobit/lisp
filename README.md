@@ -19,6 +19,7 @@ Things That Are Done
 
 TODO
 ----
+* strings
 * lambdas (fn? lambda?)
 * macros
 * local bindings (LET)
