@@ -438,6 +438,10 @@ void test_evaluate() {
   assert(is_equal(new_int(100), evaluate(read_first("(if () 200 100)"), env)));
   assert(is_equal(new_int(200), evaluate(read_first("(if 1 200 100)"), env)));
   assert(is_equal(new_nil(), evaluate(read_first("(if () 200)"), env)));
+  assert(is_equal(new_int(42), evaluate(read_first("(+ 2 40)"), env)));
+  assert(is_equal(new_int(4200), evaluate(read_first("(* 100 (+ 2 40))"), env)));
+  assert(is_equal(new_int(10), evaluate(read_first("(/ 100 (+ 5 5))"), env)));
+  assert(is_equal(new_int(20), evaluate(read_first("(- 50 30)"), env)));
 }
 
 /* read */
@@ -453,6 +457,13 @@ int is_alpha(char c) {
   return (ic >= 65 && ic <= 90) || (ic >= 97 && ic <= 122);
 }
 
+int is_first_symbol_char(char c) {
+  if(is_alpha(c)) {
+    return 1;
+  }
+  return strchr("+*-!/", c) != NULL;
+}
+
 int is_numeric(char c) {
   int ic = (int)c;
   return (ic >= 48 && ic <= 57);
@@ -460,6 +471,10 @@ int is_numeric(char c) {
 
 int is_alphanumeric(char c) {
   return is_alpha(c) || is_numeric(c);
+}
+
+int is_symbol_char(char c) {
+  return is_first_symbol_char(c) || is_numeric(c);
 }
 
 int is_whitespace(char c) {
@@ -495,7 +510,7 @@ pointer read_symbol(read_pointer * rp) {
   int length = 0;
   const char * start = rp->loc;
   const char * next = start;
-  while(is_alphanumeric(*next)) {
+  while(is_symbol_char(*next)) {
     length++;
     next++;
   }
@@ -532,7 +547,7 @@ pointer read_next(read_pointer * rp) {
     return NULL;
   } else if(next == '(') {
     return read_pair(rp);
-  } else if(is_alpha(next)) {
+  } else if(is_first_symbol_char(next)) {
     return read_symbol(rp);
   } else if(is_numeric(next)) {
     return read_number(rp);
@@ -617,66 +632,62 @@ pointer ff_println(pointer args) {
   return ret_val;
 }
 
+pointer ff_plus(pointer args) {
+  uint64_t accum = 0;
+  pointer next = args;
+  while(is_pair(next)) {
+    accum += get_int(car(next));
+    next = cdr(next);
+  }
+  return new_int(accum);
+}
+
+pointer ff_minus(pointer args) {
+  uint64_t accum = get_int(car(args));
+  pointer next = cdr(args);
+  while(is_pair(next)) {
+    accum -= get_int(car(next));
+    next = cdr(next);
+  }
+  return new_int(accum);
+}
+
+pointer ff_mult(pointer args) {
+  uint64_t accum = 1;
+  pointer next = args;
+  while(is_pair(next)) {
+    accum *= get_int(car(next));
+    next = cdr(next);
+  }
+  return new_int(accum);
+}
+
+pointer ff_div(pointer args) {
+  uint64_t accum = get_int(car(args));
+  pointer next = cdr(args);
+  while(is_pair(next)) {
+    accum /= get_int(car(next));
+    next = cdr(next);
+  }
+  return new_int(accum);
+}
+
 /* core env */
 
 pointer build_core_env() {
   pointer env = make_env();
   env = add_env(env, new_symbol("print"), new_func(ff_print));
   env = add_env(env, new_symbol("println"), new_func(ff_println));
+  env = add_env(env, new_symbol("+"), new_func(ff_plus));
+  env = add_env(env, new_symbol("-"), new_func(ff_minus));
+  env = add_env(env, new_symbol("*"), new_func(ff_mult));
+  env = add_env(env, new_symbol("/"), new_func(ff_div));
   return env;
 }
 
 /* the rest */
 
-void what_is_it(pointer p) {
-  if(is_pair(p)) {
-    printf("It's a pair!\n");
-  }
-  if(is_symbol(p)) {
-    printf("It's a symbol!\n");
-  }
-  if(is_int(p)) {
-    printf("It's an int!\n");
-  }
-}
-
 int main() {
-  printf("Hello, world\n");
-  pointer p = new_nil();
-  what_is_it(p);
-  pointer s = new_symbol("foo");
-  what_is_it(s);
-  pointer i = new_int(100);
-  what_is_it(i);
-  assert(100 == get_int(i));
-  pointer thing1 = new_nil();
-  assert(0 == count(thing1));
-  pointer thing2 = new_pair(new_int(100), new_nil());
-  assert(1 == count(thing2));
-  pointer thing3 = new_pair(new_int(100), new_pair(new_symbol("hello"), new_nil()));
-  assert(2 == count(thing3));
-  pointer thing4 = new_pair(new_int(100), new_nil());
-  assert(1 == count(thing4));
-  pointer thing5 = new_pair(new_int(100), new_pair(new_nil(), new_nil()));
-  assert(2 == count(thing5));
-  print_thing(thing1);
-  print_thing(thing2);
-  print_thing(thing3);
-  print_thing(thing4);
-  print_thing(thing5);
-  printf("\n");
-
-  pointer test = read_from_string("this that 100");
-  print_thing(test);
-  printf("\n");
-
-  pointer test_nil = read_from_string("");
-  print_thing(test_nil);
-  printf("\n");
-
-  pointer test2 = read_from_string("this (that ) 100");
-  print_thing(test2);
-  printf("\n");
 
   init_globals();
   test_is_equal();
