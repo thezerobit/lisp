@@ -348,6 +348,7 @@ pointer lookup_env(pointer env, pointer sym) {
       return lookup_env(cdr(env), sym);
     }
   } else {
+    printf("symbol not found: %s\n", get_symbol(sym)->name);
     assert(0);
     return NULL;
   }
@@ -366,6 +367,15 @@ void test_env() {
 
 /* evaluate */
 
+pointer SYMBOL_QUOTE;
+pointer SYMBOL_IF;
+
+void init_globals() {
+  SYMBOL_QUOTE = new_symbol("quote");
+  SYMBOL_IF = new_symbol("if");
+  assert(is_equal(SYMBOL_QUOTE, new_symbol("quote")));
+}
+
 pointer evaluate(pointer form, pointer env);
 pointer evaluate_list(pointer args, pointer env);
 
@@ -377,18 +387,42 @@ pointer evaluate_list(pointer args, pointer env) {
   }
 }
 
+pointer read_first(const char * input) {
+  return car(read_from_string(input));
+}
+
 pointer evaluate(pointer form, pointer env) {
+  /* printf("evaluating: "); print_thing(form); printf("\n"); */
   if(is_symbol(form)) {
     return lookup_env(env, form);
   } else if(is_nil(form) || is_other(form)) {
     return form;
   } else { /* pair */
-    pointer first = evaluate(car(form), env);
-    assert(is_func(first));
-    if(is_func(first)) {
-      return call_func(first, evaluate_list(cdr(form), env));
+    pointer first = car(form);
+    /* IF */
+    if(is_equal(first, SYMBOL_IF)) {
+      int length = count(cdr(form));
+      assert(length == 2 || length == 3);
+      if(is_nil(evaluate(car(cdr(form)), env))) {
+        if(length > 2) {
+          return evaluate(car(cdr(cdr(cdr(form)))), env);
+        } else {
+          return new_nil();
+        }
+      } else {
+        return evaluate(car(cdr(cdr(form))), env);
+      }
     }
-    /* TODO: lookup macros / special forms */
+    /* QUOTE */
+    if(is_equal(first, SYMBOL_QUOTE)) {
+      return car(cdr(form)); // unevaluated
+    }
+    pointer first_eval = evaluate(car(form), env);
+    /* WRAPPED C FUNCTION */
+    if(is_func(first_eval)) {
+      return call_func(first_eval, evaluate_list(cdr(form), env));
+    }
+    /* TODO: macros */
     return form;
   }
 }
@@ -399,6 +433,11 @@ void test_evaluate() {
   printf("Should print 100: ");
   evaluate(car(forms), env);
   printf("\n");
+
+  assert(is_equal(new_symbol("hello"), evaluate(read_first("(quote hello)"), env)));
+  assert(is_equal(new_int(100), evaluate(read_first("(if () 200 100)"), env)));
+  assert(is_equal(new_int(200), evaluate(read_first("(if 1 200 100)"), env)));
+  assert(is_equal(new_nil(), evaluate(read_first("(if () 200)"), env)));
 }
 
 /* read */
@@ -639,6 +678,7 @@ int main() {
   print_thing(test2);
   printf("\n");
 
+  init_globals();
   test_is_equal();
   test_map();
   test_env();
