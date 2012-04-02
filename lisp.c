@@ -1,5 +1,6 @@
 /* BOEHM! */
 #include "gc.h"
+#include "readline/readline.h"
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -805,16 +806,29 @@ int main() {
   test_func();
   test_evaluate();
   printf("Test, success!\n");
+  printf("\nType exit to exit.\n");
 
+  const char * prompt = ">>> ";
 
-  /* pointer forms = read_from_string(in); */
-  /* print_thing(forms); */
-  /* printf("\n"); */
-  /* pointer val; */
-  /* while(is_pair(forms)) { */
-  /*   print_thing(car(forms)); */
-  /*   forms = cdr(forms); */
-  /* } */
+  while(1) {
+    const char * in;
+    in = readline(prompt);
+    if(strcmp(in, "exit") == 0) {
+      break;
+    }
+    /* printf("You typed: %s\n", in); */
+    pointer env = build_core_env();
+
+    pointer forms = read_from_string(in);
+    pointer val;
+    while(is_pair(forms)) {
+      print_thing(evaluate(car(forms), env));
+      printf("\n");
+      forms = cdr(forms);
+    }
+  }
+
+  printf("Goodbye.\n");
 
   return 0;
 }

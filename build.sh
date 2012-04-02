@@ -1,2 +1,2 @@
-gcc lisp.c -lgc -O2 -o lisp
+gcc lisp.c -lgc -lreadline -O2 -o lisp
 
