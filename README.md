@@ -5,7 +5,8 @@ Things That Are Done
 * read
   * symbols
   * lists
-  * (positive) integers
+  * signed integers
+  * strings
 
 * interpreted evaluation (evaluate)
   * lookup symbols

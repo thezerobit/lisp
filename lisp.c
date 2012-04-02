@@ -13,8 +13,9 @@
 #define TYPE_SYMBOL  (0b010)
 #define TYPE_OTHER   (0b011)
 
-#define TYPE_INT     4;
-#define TYPE_FUNC    5;
+#define TYPE_INT     4
+#define TYPE_FUNC    5
+#define TYPE_STRING  6
 
 typedef void * pointer;
 
@@ -25,6 +26,7 @@ pointer ff_print(pointer args);
 
 pointer build_core_env();
 pointer read_from_string(const char * input);
+const char * get_string(pointer p);
 
 /* nil == empty list */
 
@@ -151,6 +153,7 @@ typedef struct {
     void * data;
     int64_t int_num;
     pointer (*ffunc)(pointer);
+    const char * str;
   };
 } other;
 
@@ -170,7 +173,17 @@ int is_other_equal(pointer p, pointer o) {
   if(a->type != b->type) {
     return 0;
   } else {
-    return (a->int_num == b->int_num);
+    switch(a->type) {
+      case TYPE_INT:
+        return (a->int_num == b->int_num);
+        break;
+      case TYPE_FUNC:
+        return (a->ffunc == b->ffunc);
+      case TYPE_STRING:
+        return strcmp(a->str, b->str) == 0;
+      default:
+        return 0;
+    }
   }
 }
 
@@ -217,6 +230,24 @@ void test_func() {
   printf("\n");
 }
 
+/* String */
+
+int is_string(pointer p) {
+  return is_other(p) && get_other(p)->type == TYPE_STRING;
+}
+
+pointer new_string(const char * s) {
+  Other o = (Other)GC_MALLOC(sizeof(other));
+  o->type = TYPE_STRING;
+  o->str = s;
+  return (pointer)((uint64_t)o | TYPE_OTHER);
+}
+
+const char * get_string(pointer p) {
+  assert(is_string(p));
+  return get_other(p)->str;
+}
+
 /* Equality */
 
 int is_equal(pointer p, pointer o) {
@@ -259,6 +290,10 @@ void test_is_equal() {
   pointer p4 = new_pair(new_int(1), new_pair(new_int(2), new_nil()));
   pointer p5 = new_pair(new_int(1), new_pair(new_int(3), new_nil()));
 
+  pointer str1 = new_string("hi");
+  pointer str2 = new_string("hello");
+  pointer str3 = new_string("hello");
+
   assert( is_equal(i1, i1));
   assert(!is_equal(i1, i2));
   assert( is_equal(i1, i3));
@@ -285,6 +320,9 @@ void test_is_equal() {
   assert(!is_equal(p1, p5));
   assert( is_equal(p3, p4));
   assert(!is_equal(p4, p5));
+
+  assert(!is_equal(str1, str2));
+  assert( is_equal(str3, str2));
 }
 
 /* functional map
@@ -388,7 +426,8 @@ pointer evaluate_list(pointer args, pointer env) {
 }
 
 pointer read_first(const char * input) {
-  return car(read_from_string(input));
+  pointer l = read_from_string(input);
+  return car(l);
 }
 
 pointer evaluate(pointer form, pointer env) {
@@ -442,6 +481,10 @@ void test_evaluate() {
   assert(is_equal(new_int(4200), evaluate(read_first("(* 100 (+ 2 40))"), env)));
   assert(is_equal(new_int(10), evaluate(read_first("(/ 100 (+ 5 5))"), env)));
   assert(is_equal(new_int(20), evaluate(read_first("(- 50 30)"), env)));
+  assert(is_equal(new_int(-30), evaluate(read_first("-30"), env)));
+  assert(is_equal(new_string("hello"), evaluate(read_first("\"hello\""), env)));
+  assert(is_equal(new_string("test \\ slash"), evaluate(read_first("\"test \\\\ slash\""), env)));
+  assert(is_equal(new_string("test \\ slash"), evaluate(read_first("\"test \\\\ slash\""), env)));
 }
 
 /* read */
@@ -523,14 +566,16 @@ pointer read_symbol(read_pointer * rp) {
 }
 
 pointer read_number(read_pointer * rp) {
-  int length = 0;
   const char * start = rp->loc;
   const char * next = start;
-  while(is_numeric(*next)) {
-    length++;
+  if((*next) == '-') {
     next++;
   }
-  char * name = (char *)GC_MALLOC(length + 1);
+  while(is_numeric(*next)) {
+    next++;
+  }
+  int length = next - start;
+  char * name = (char *)GC_MALLOC(next - start + 1);
   strncpy(name, start, length);
   name[length] = 0;
   rp->loc = next;
@@ -540,17 +585,75 @@ pointer read_number(read_pointer * rp) {
   return new_int(num);
 }
 
+pointer read_string(read_pointer * rp) {
+  assert((*rp->loc) == '"');
+
+  const char * next = rp->loc + 1;
+  int length = 0;
+  int escape_next = 0;
+  while(1) {
+    assert((*next) != 0);
+    if(escape_next) {
+      next++;
+      length++;
+      escape_next = 0;
+    } else {
+      if((*next) == '\\') {
+        escape_next = 1;
+        next++;
+      } else if((*next == '"')) {
+        break;
+      } else {
+        escape_next = 0;
+        length++;
+        next++;
+      }
+    }
+  }
+
+  char * n_string = (char *)GC_MALLOC(length + 1);
+
+  rp->loc++;
+  escape_next = 0;
+  char * p_n_string = n_string;
+  while(1) {
+    assert((*rp->loc) != 0);
+    if(escape_next) {
+      (*p_n_string++) = (*rp->loc++);
+      escape_next = 0;
+    } else {
+      if((*rp->loc) == '\\') {
+        escape_next = 1;
+        rp->loc++;
+      } else if((*rp->loc == '"')) {
+        break;
+      } else {
+        escape_next = 0;
+        (*p_n_string++) = (*rp->loc++);
+      }
+    }
+  }
+  n_string[length] = 0;
+  rp->loc++;
+
+  return new_string(n_string);
+}
+
 pointer read_next(read_pointer * rp) {
   skip_whitespace(rp);
   char next = *(rp->loc);
   if(next == 0) {
     return NULL;
-  } else if(next == '(') {
+  }
+  char succ = *(rp->loc + 1);
+  if(next == '(') {
     return read_pair(rp);
+  } else if(is_numeric(next) || (next == '-' && is_numeric(succ))) {
+    return read_number(rp);
   } else if(is_first_symbol_char(next)) {
     return read_symbol(rp);
-  } else if(is_numeric(next)) {
-    return read_number(rp);
+  } else if(next == '"') {
+    return read_string(rp);
   }
   return NULL;
 }
@@ -578,7 +681,11 @@ pointer read_from_string(const char * input) {
   pointer last_pair = new_nil();
   pointer next_item;
   /* build a reverse list of elements read */
-  while(next_item = read_next(rp)) {
+  while(1) {
+    next_item = read_next(rp);
+    if(next_item == NULL) {
+      break;
+    }
     last_pair = new_pair(next_item, last_pair);
   }
   /* reverse it */
@@ -607,6 +714,8 @@ void print_thing(pointer p) {
     printf("%" PRId64, get_int(p));
   } else if(is_nil(p)) {
     printf("()");
+  } else if(is_string(p)) {
+    printf("\"%s\"", get_string(p)); // TODO here
   }
 }
 
@@ -696,6 +805,16 @@ int main() {
   test_func();
   test_evaluate();
   printf("Test, success!\n");
+
+
+  /* pointer forms = read_from_string(in); */
+  /* print_thing(forms); */
+  /* printf("\n"); */
+  /* pointer val; */
+  /* while(is_pair(forms)) { */
+  /*   print_thing(car(forms)); */
+  /*   forms = cdr(forms); */
+  /* } */
 
   return 0;
 }
