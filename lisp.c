@@ -17,6 +17,8 @@
 #define TYPE_INT     4
 #define TYPE_FUNC    5
 #define TYPE_STRING  6
+#define TYPE_VECTOR  7
+#define TYPE_BOOLEAN 8
 
 typedef void * pointer;
 
@@ -26,6 +28,7 @@ void print_thing(pointer p);
 pointer ff_print(pointer args);
 
 pointer build_core_env();
+pointer read_first(const char * input);
 pointer read_from_string(const char * input);
 const char * get_string(pointer p);
 
@@ -76,16 +79,6 @@ pointer car(pointer p) {
 pointer cdr(pointer p) {
   Pair pair = get_pair(p);
   return pair->cdr;
-}
-
-void set_car(pointer p, pointer thing) {
-  Pair pair = get_pair(p);
-  pair->car = thing;
-}
-
-void set_cdr(pointer p, pointer thing) {
-  Pair pair = get_pair(p);
-  pair->cdr = thing;
 }
 
 pointer reverse(pointer p) {
@@ -149,12 +142,20 @@ int is_symbol_equal(pointer p, pointer o) {
 /* Other */
 
 typedef struct {
+  int count;
+  pointer * elems;
+} vector;
+
+typedef vector * Vector;
+
+typedef struct {
   int type;
   union {
     void * data;
     int64_t int_num;
     pointer (*ffunc)(pointer);
     const char * str;
+    Vector vec;
   };
 } other;
 
@@ -171,6 +172,8 @@ Other get_other(pointer p) {
 int is_other_equal(pointer p, pointer o) {
   Other a = get_other(p);
   Other b = get_other(o);
+  Vector v1, v2;
+  int i, c;
   if(a->type != b->type) {
     return 0;
   } else {
@@ -182,6 +185,20 @@ int is_other_equal(pointer p, pointer o) {
         return (a->ffunc == b->ffunc);
       case TYPE_STRING:
         return strcmp(a->str, b->str) == 0;
+      case TYPE_VECTOR:
+        v1 = a->vec;
+        v2 = b->vec;
+        if(v1->count != v1->count) {
+          return 0;
+        } else {
+          c = v1->count;
+          for(i = 0; i < c; ++ i) {
+            if(!is_equal(v1->elems[i], v2->elems[i])) {
+              return 0;
+            }
+          }
+          return 1;
+        }
       default:
         return 0;
     }
@@ -247,6 +264,66 @@ pointer new_string(const char * s) {
 const char * get_string(pointer p) {
   assert(is_string(p));
   return get_other(p)->str;
+}
+
+/* Vector */
+
+int is_vector(pointer p) {
+  return is_other(p) && get_other(p)->type == TYPE_VECTOR;
+}
+
+Vector get_vector(pointer p) {
+  assert(is_vector(p));
+  return get_other(p)->vec;
+}
+
+Other alloc_vector(int size) {
+  Other o = (Other)GC_MALLOC(sizeof(other));
+  o->type = TYPE_VECTOR;
+  o->vec = (Vector)GC_MALLOC(sizeof(vector));
+  o->vec->count = size;
+  o->vec->elems = (pointer *)GC_MALLOC(sizeof(pointer) * size);
+  return o;
+}
+
+pointer new_vector_from_list(pointer list) {
+  assert(is_pair(list));
+  Other o = alloc_vector(count(list));
+  pointer next = list;
+  int offset = 0;
+  while(is_pair(next)) {
+    o->vec->elems[offset++] = car(next);
+    next = cdr(next);
+  }
+  return (pointer)((uint64_t)o | TYPE_OTHER);
+}
+
+pointer vector_get(pointer v, pointer offset) {
+  assert(is_vector(v));
+  assert(is_int(offset));
+  int n = get_int(offset);
+  return get_vector(v)->elems[n];
+}
+
+pointer ff_vector_ref(pointer l) {
+  assert(is_pair(l));
+  pointer v = car(l);
+  pointer rest = cdr(l);
+  return vector_get(v, rest);
+}
+
+void test_vector() {
+  pointer list_of_numbers = read_first("(1 2 3 4 5 6)");
+  pointer v = new_vector_from_list(list_of_numbers);
+  assert(is_equal(new_int(1), vector_get(v, new_int(0))));
+  print_thing(v);
+  printf("\n");
+}
+
+/* Boolean */
+
+int is_boolean(pointer p) {
+  return is_other(p) && get_other(p)->type == TYPE_BOOLEAN;
 }
 
 /* Equality */
@@ -408,10 +485,14 @@ void test_env() {
 
 pointer SYMBOL_QUOTE;
 pointer SYMBOL_IF;
+pointer BOOLEAN_TRUE;
+pointer BOOLEAN_FALSE;
 
 void init_globals() {
   SYMBOL_QUOTE = new_symbol("quote");
   SYMBOL_IF = new_symbol("if");
+  /* BOOLEAN_TRUE = new_boolean(1); */
+  /* BOOLEAN_FALSE = new_boolean(1); */
   assert(is_equal(SYMBOL_QUOTE, new_symbol("quote")));
 }
 
@@ -426,6 +507,18 @@ pointer evaluate_list(pointer args, pointer env) {
   }
 }
 
+pointer evaluate_vector(pointer v, pointer env) {
+  assert(is_vector(v));
+  Vector old_vec = get_vector(v);
+  Other o = alloc_vector(old_vec->count);
+  Vector new_vec = o->vec;
+  int i;
+  for(i = 0; i < old_vec->count; ++ i) {
+    new_vec->elems[i] = evaluate(old_vec->elems[i], env);
+  }
+  return (pointer)((uint64_t)o | TYPE_OTHER);
+}
+
 pointer read_first(const char * input) {
   pointer l = read_from_string(input);
   return car(l);
@@ -435,8 +528,17 @@ pointer evaluate(pointer form, pointer env) {
   /* printf("evaluating: "); print_thing(form); printf("\n"); */
   if(is_symbol(form)) {
     return lookup_env(env, form);
-  } else if(is_nil(form) || is_other(form)) {
+  } else if(is_nil(form)) {
     return form;
+  } else if(is_other(form)) {
+    Other o_form = get_other(form);
+    switch(o_form->type) {
+      case TYPE_VECTOR:
+        return evaluate_vector(form, env);
+        break;
+      default:
+        return form;
+    }
   } else { /* pair */
     pointer first = car(form);
     /* IF */
@@ -486,6 +588,7 @@ void test_evaluate() {
   assert(is_equal(new_string("hello"), evaluate(read_first("\"hello\""), env)));
   assert(is_equal(new_string("test \\ slash"), evaluate(read_first("\"test \\\\ slash\""), env)));
   assert(is_equal(new_string("test \\ slash"), evaluate(read_first("\"test \\\\ slash\""), env)));
+  assert(is_equal(read_first("[1 2 7]"), evaluate(read_first("[1 2 (+ 3 4)]"), env)));
 }
 
 /* read */
@@ -549,6 +652,7 @@ int read_required(read_pointer * rp, char c) {
 }
 
 pointer read_pair(read_pointer * rp);
+pointer read_vec(read_pointer * rp);
 
 pointer read_symbol(read_pointer * rp) {
   int length = 0;
@@ -649,6 +753,8 @@ pointer read_next(read_pointer * rp) {
   char succ = *(rp->loc + 1);
   if(next == '(') {
     return read_pair(rp);
+  } else if(next == '[') {
+    return read_vec(rp);
   } else if(is_numeric(next) || (next == '-' && is_numeric(succ))) {
     return read_number(rp);
   } else if(is_first_symbol_char(next)) {
@@ -671,6 +777,21 @@ pointer read_pair(read_pointer * rp) {
   pointer list = reverse(last_pair);
   read_required(rp, ')');
   return list;
+}
+
+pointer read_vec(read_pointer * rp) {
+  read_required(rp, '[');
+  pointer last_pair = new_nil();
+  pointer next_item;
+  /* build a reverse list of elements read */
+  while(next_item = read_next(rp)) {
+    last_pair = new_pair(next_item, last_pair);
+  }
+  /* reverse it */
+  pointer list = reverse(last_pair);
+  pointer v = new_vector_from_list(list);
+  read_required(rp, ']');
+  return v;
 }
 
 /**
@@ -698,6 +819,8 @@ pointer read_from_string(const char * input) {
 
 void print_thing(pointer p) {
   pointer n;
+  int i;
+  Vector v;
   if(is_pair(p)) {
     printf("(");
     n = p;
@@ -711,12 +834,34 @@ void print_thing(pointer p) {
     printf(")");
   } else if(is_symbol(p)) {
     printf("%s", get_symbol(p)->name);
-  } else if(is_int(p)) {
-    printf("%" PRId64, get_int(p));
   } else if(is_nil(p)) {
     printf("()");
-  } else if(is_string(p)) {
-    printf("\"%s\"", get_string(p)); // TODO here
+  } else if(is_other(p)) {
+    switch(get_other(p)->type) {
+      case TYPE_INT:
+        printf("%" PRId64, get_int(p));
+        break;
+      case TYPE_FUNC:
+        printf("<foreign function>", get_string(p));
+        break;
+      case TYPE_STRING:
+        printf("\"%s\"", get_string(p));
+        break;
+      case TYPE_VECTOR:
+        printf("[");
+        v = get_vector(p);
+        for(i = 0; i < v->count; ++ i) {
+          print_thing(v->elems[i]);
+          if(i < v->count - 1) {
+            printf(" ");
+          }
+        }
+        printf("]");
+        break;
+      default:
+        printf("<unknown object>");
+        break;
+    }
   }
 }
 
@@ -792,6 +937,8 @@ pointer build_core_env() {
   env = add_env(env, new_symbol("-"), new_func(ff_minus));
   env = add_env(env, new_symbol("*"), new_func(ff_mult));
   env = add_env(env, new_symbol("/"), new_func(ff_div));
+  env = add_env(env, new_symbol("vector"), new_func(new_vector_from_list));
+  env = add_env(env, new_symbol("vector-ref"), new_func(ff_vector_ref));
   return env;
 }
 
@@ -805,6 +952,7 @@ int main() {
   test_env();
   test_func();
   test_evaluate();
+  test_vector();
   printf("Test, success!\n");
   printf("\nType exit to exit.\n");
 

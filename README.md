@@ -17,6 +17,7 @@ Things That Are Done
   * lists
   * signed integers
   * strings
+  * vectors and vector literals
 
 * interpreted evaluation (evaluate)
   * lookup symbols
@@ -33,9 +34,14 @@ Things That Are Done
 TODO
 ----
 
+* boolean values: true and false
+* single 'quote syntax sugar
 * numerical and string comparison, gt, lt, etc...
 * lambdas (fn? lambda?)
-* map, vector, set
+* vector goodies
+  * vector->list
+  * list->vector
+* map, set
   * language support
   * literal syntax
 * macros
