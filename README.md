@@ -18,12 +18,13 @@ Things That Are Done
   * signed integers
   * strings
   * vectors and vector literals
+  * boolean values: true and false
 
 * interpreted evaluation (evaluate)
   * lookup symbols
   * call built-in functions
   * QUOTE
-  * IF
+  * IF (false and empty list are false)
 
 * built-in functions
   * print and println
@@ -34,7 +35,6 @@ Things That Are Done
 TODO
 ----
 
-* boolean values: true and false
 * single 'quote syntax sugar
 * numerical and string comparison, gt, lt, etc...
 * lambdas (fn? lambda?)
@@ -47,5 +47,6 @@ TODO
 * macros
 * local bindings (LET)
 * top level bindings (DEF, DEFUN)
+* keywords
 * compilation
 

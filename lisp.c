@@ -326,6 +326,18 @@ int is_boolean(pointer p) {
   return is_other(p) && get_other(p)->type == TYPE_BOOLEAN;
 }
 
+pointer new_boolean(int b) {
+  Other o = (Other)GC_MALLOC(sizeof(other));
+  o->type = TYPE_BOOLEAN;
+  o->int_num = (uint64_t)b;
+  return (pointer)((uint64_t)o | TYPE_OTHER);
+}
+
+int get_boolean(pointer p) {
+  assert(is_boolean(p));
+  return (int)(get_other(p)->int_num);
+}
+
 /* Equality */
 
 int is_equal(pointer p, pointer o) {
@@ -485,14 +497,18 @@ void test_env() {
 
 pointer SYMBOL_QUOTE;
 pointer SYMBOL_IF;
+pointer SYMBOL_TRUE;
+pointer SYMBOL_FALSE;
 pointer BOOLEAN_TRUE;
 pointer BOOLEAN_FALSE;
 
 void init_globals() {
   SYMBOL_QUOTE = new_symbol("quote");
   SYMBOL_IF = new_symbol("if");
-  /* BOOLEAN_TRUE = new_boolean(1); */
-  /* BOOLEAN_FALSE = new_boolean(1); */
+  SYMBOL_TRUE = new_symbol("true");
+  SYMBOL_FALSE = new_symbol("false");
+  BOOLEAN_TRUE = new_boolean(1);
+  BOOLEAN_FALSE = new_boolean(0);
   assert(is_equal(SYMBOL_QUOTE, new_symbol("quote")));
 }
 
@@ -545,7 +561,8 @@ pointer evaluate(pointer form, pointer env) {
     if(is_equal(first, SYMBOL_IF)) {
       int length = count(cdr(form));
       assert(length == 2 || length == 3);
-      if(is_nil(evaluate(car(cdr(form)), env))) {
+      pointer second = evaluate(car(cdr(form)), env);
+      if(is_nil(second) || second == BOOLEAN_FALSE) {
         if(length > 2) {
           return evaluate(car(cdr(cdr(cdr(form)))), env);
         } else {
@@ -589,6 +606,10 @@ void test_evaluate() {
   assert(is_equal(new_string("test \\ slash"), evaluate(read_first("\"test \\\\ slash\""), env)));
   assert(is_equal(new_string("test \\ slash"), evaluate(read_first("\"test \\\\ slash\""), env)));
   assert(is_equal(read_first("[1 2 7]"), evaluate(read_first("[1 2 (+ 3 4)]"), env)));
+  assert(is_equal(BOOLEAN_TRUE, evaluate(read_first("true"), env)));
+  assert(is_equal(BOOLEAN_FALSE, evaluate(read_first("false"), env)));
+  assert(is_equal(new_int(1), evaluate(read_first("(if true 1 0)"), env)));
+  assert(is_equal(new_int(0), evaluate(read_first("(if false 1 0)"), env)));
 }
 
 /* read */
@@ -858,6 +879,13 @@ void print_thing(pointer p) {
         }
         printf("]");
         break;
+      case TYPE_BOOLEAN:
+        if(p == BOOLEAN_TRUE) {
+          printf("true");
+        } else {
+          printf("false");
+        }
+        break;
       default:
         printf("<unknown object>");
         break;
@@ -931,6 +959,8 @@ pointer ff_div(pointer args) {
 
 pointer build_core_env() {
   pointer env = make_env();
+  env = add_env(env, SYMBOL_TRUE, BOOLEAN_TRUE);
+  env = add_env(env, SYMBOL_FALSE, BOOLEAN_FALSE);
   env = add_env(env, new_symbol("print"), new_func(ff_print));
   env = add_env(env, new_symbol("println"), new_func(ff_println));
   env = add_env(env, new_symbol("+"), new_func(ff_plus));
