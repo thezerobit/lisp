@@ -19,6 +19,7 @@
 #define TYPE_STRING  6
 #define TYPE_VECTOR  7
 #define TYPE_BOOLEAN 8
+#define TYPE_LAMBDA  9
 
 typedef void * pointer;
 
@@ -31,6 +32,10 @@ pointer build_core_env();
 pointer read_first(const char * input);
 pointer read_from_string(const char * input);
 const char * get_string(pointer p);
+int is_lambda(pointer p);
+pointer add_env(pointer env, pointer sym, pointer value);
+pointer evaluate(pointer form, pointer env);
+pointer evaluate_list(pointer args, pointer env);
 
 /* nil == empty list */
 
@@ -131,11 +136,6 @@ Symbol get_symbol(pointer p) {
 }
 
 int is_symbol_equal(pointer p, pointer o) {
-  /* Yeah, this is slow. Eventually symbols should be in a map and simple
-   * pointer comparison will do. Even later, due to determinism in lexical
-   * scoping, these will be in a stack and symbols will resolve to a
-   * stack offset ahead of time.
-   */
   return strcmp(get_symbol(p)->name, get_symbol(o)->name) == 0;
 }
 
@@ -149,6 +149,14 @@ typedef struct {
 typedef vector * Vector;
 
 typedef struct {
+  pointer arglist;
+  pointer body;
+  pointer env;
+} lambda;
+
+typedef lambda * Lambda;
+
+typedef struct {
   int type;
   union {
     void * data;
@@ -156,6 +164,7 @@ typedef struct {
     pointer (*ffunc)(pointer);
     const char * str;
     Vector vec;
+    Lambda lambda;
   };
 } other;
 
@@ -338,6 +347,51 @@ int get_boolean(pointer p) {
   return (int)(get_other(p)->int_num);
 }
 
+/* Lambda */
+
+int is_lambda(pointer p) {
+  return is_other(p) && get_other(p)->type == TYPE_LAMBDA;
+}
+
+pointer new_lambda(pointer arglist, pointer body, pointer env) {
+  Other o = (Other)GC_MALLOC(sizeof(other));
+  o->type = TYPE_LAMBDA;
+  o->lambda = (Lambda)GC_MALLOC(sizeof(lambda));
+  Lambda l = o->lambda;
+  l->arglist = arglist;
+  l->body = body;
+  l->env = env;
+  return (pointer)((uint64_t)o | TYPE_OTHER);
+}
+
+Lambda get_lambda(pointer p) {
+  assert(is_lambda(p));
+  return get_other(p)->lambda;
+}
+
+pointer call_lambda(Lambda l, pointer arglist) {
+  // build env from arglist
+  assert(count(arglist) == count(l->arglist));
+  pointer env = l->env;
+  pointer args = arglist;
+  pointer argsymbols = l->arglist;
+  while(is_pair(args)) {
+    pointer sym = car(argsymbols);
+    assert(is_symbol(sym));
+    env = add_env(env, sym, car(args));
+    args = cdr(args);
+    argsymbols = cdr(argsymbols);
+  }
+  // evaluate forms in new environment, return last or nil
+  pointer result = new_nil();
+  pointer body = l->body;
+  while(is_pair(body)) {
+    result = evaluate(car(body), env);
+    body = cdr(body);
+  }
+  return result;
+}
+
 /* Equality */
 
 int is_equal(pointer p, pointer o) {
@@ -501,6 +555,7 @@ pointer SYMBOL_TRUE;
 pointer SYMBOL_FALSE;
 pointer BOOLEAN_TRUE;
 pointer BOOLEAN_FALSE;
+pointer SYMBOL_LAMBDA;
 
 void init_globals() {
   SYMBOL_QUOTE = new_symbol("quote");
@@ -509,11 +564,8 @@ void init_globals() {
   SYMBOL_FALSE = new_symbol("false");
   BOOLEAN_TRUE = new_boolean(1);
   BOOLEAN_FALSE = new_boolean(0);
-  assert(is_equal(SYMBOL_QUOTE, new_symbol("quote")));
+  SYMBOL_LAMBDA = new_symbol("lambda");
 }
-
-pointer evaluate(pointer form, pointer env);
-pointer evaluate_list(pointer args, pointer env);
 
 pointer evaluate_list(pointer args, pointer env) {
   if(is_pair(args)) {
@@ -576,10 +628,18 @@ pointer evaluate(pointer form, pointer env) {
     if(is_equal(first, SYMBOL_QUOTE)) {
       return car(cdr(form)); // unevaluated
     }
+    /* LAMBDA */
+    if(is_equal(first, SYMBOL_LAMBDA)) {
+      pointer rest = cdr(form);
+      return new_lambda(car(rest), cdr(rest), env); // unevaluated
+    }
     pointer first_eval = evaluate(car(form), env);
     /* WRAPPED C FUNCTION */
     if(is_func(first_eval)) {
       return call_func(first_eval, evaluate_list(cdr(form), env));
+    }
+    if(is_lambda(first_eval)) {
+      return call_lambda(get_lambda(first_eval), evaluate_list(cdr(form), env));
     }
     /* TODO: macros */
     return form;
@@ -612,6 +672,7 @@ void test_evaluate() {
   assert(is_equal(new_int(0), evaluate(read_first("(if false 1 0)"), env)));
   assert(is_equal(BOOLEAN_TRUE, evaluate(read_first("(> 10 3)"), env)));
   assert(is_equal(BOOLEAN_FALSE, evaluate(read_first("(<= 10 3)"), env)));
+  assert(is_equal(new_int(99), evaluate(read_first("((lambda (x) (* x 3)) 33)"), env)));
 }
 
 /* read */

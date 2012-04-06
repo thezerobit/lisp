@@ -27,6 +27,7 @@ Things That Are Done
   * IF (false and empty list are false)
   * numerical comparison, gt, lt, gte, lte
   * = and != comparison for all types
+  * lambda
 
 * built-in functions
   * print and println
@@ -38,7 +39,7 @@ TODO
 ----
 
 * single 'quote syntax sugar
-* lambdas (fn? lambda?)
+* begin / do / progn
 * vector goodies
   * vector->list
   * list->vector
