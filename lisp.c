@@ -610,6 +610,8 @@ void test_evaluate() {
   assert(is_equal(BOOLEAN_FALSE, evaluate(read_first("false"), env)));
   assert(is_equal(new_int(1), evaluate(read_first("(if true 1 0)"), env)));
   assert(is_equal(new_int(0), evaluate(read_first("(if false 1 0)"), env)));
+  assert(is_equal(BOOLEAN_TRUE, evaluate(read_first("(> 10 3)"), env)));
+  assert(is_equal(BOOLEAN_FALSE, evaluate(read_first("(<= 10 3)"), env)));
 }
 
 /* read */
@@ -629,7 +631,7 @@ int is_first_symbol_char(char c) {
   if(is_alpha(c)) {
     return 1;
   }
-  return strchr("+*-!/", c) != NULL;
+  return strchr("+*-!/><=", c) != NULL;
 }
 
 int is_numeric(char c) {
@@ -955,6 +957,71 @@ pointer ff_div(pointer args) {
   return new_int(accum);
 }
 
+pointer ff_lt(pointer args) {
+  uint64_t prev_int = get_int(car(args));
+  pointer next = cdr(args);
+  uint64_t next_int;
+  while(is_pair(next)) {
+    next_int = get_int(car(next));
+    if(prev_int >= next_int) {
+      return BOOLEAN_FALSE;
+    }
+    prev_int = next_int;
+    next = cdr(next);
+  }
+  return BOOLEAN_TRUE;
+}
+
+pointer ff_gt(pointer args) {
+  uint64_t prev_int = get_int(car(args));
+  pointer next = cdr(args);
+  uint64_t next_int;
+  while(is_pair(next)) {
+    next_int = get_int(car(next));
+    if(prev_int <= next_int) {
+      return BOOLEAN_FALSE;
+    }
+    prev_int = next_int;
+    next = cdr(next);
+  }
+  return BOOLEAN_TRUE;
+}
+
+pointer not(pointer p) {
+  if(is_nil(p) || p == BOOLEAN_FALSE) {
+    return BOOLEAN_TRUE;
+  }
+  return BOOLEAN_FALSE;
+}
+
+pointer ff_lte(pointer args) {
+  return not(ff_gt(args));
+}
+
+pointer ff_gte(pointer args) {
+  return not(ff_lt(args));
+}
+
+/**
+ * Equality for any types. All arguments have to be equal to be true.
+ */
+pointer ff_eq(pointer args) {
+  pointer prev = car(args);
+  pointer next = cdr(args);
+  while(is_pair(next)) {
+    if(!is_equal(prev, car(next))) {
+      return BOOLEAN_FALSE;
+    }
+    prev = car(next);
+    next = cdr(next);
+  }
+  return BOOLEAN_TRUE;
+}
+
+pointer ff_neq(pointer args) {
+  return not(ff_eq(args));
+}
+
 /* core env */
 
 pointer build_core_env() {
@@ -967,6 +1034,12 @@ pointer build_core_env() {
   env = add_env(env, new_symbol("-"), new_func(ff_minus));
   env = add_env(env, new_symbol("*"), new_func(ff_mult));
   env = add_env(env, new_symbol("/"), new_func(ff_div));
+  env = add_env(env, new_symbol(">"), new_func(ff_gt));
+  env = add_env(env, new_symbol("<"), new_func(ff_lt));
+  env = add_env(env, new_symbol(">="), new_func(ff_gte));
+  env = add_env(env, new_symbol("<="), new_func(ff_lte));
+  env = add_env(env, new_symbol("="), new_func(ff_eq));
+  env = add_env(env, new_symbol("!="), new_func(ff_neq));
   env = add_env(env, new_symbol("vector"), new_func(new_vector_from_list));
   env = add_env(env, new_symbol("vector-ref"), new_func(ff_vector_ref));
   return env;

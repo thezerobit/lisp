@@ -25,6 +25,8 @@ Things That Are Done
   * call built-in functions
   * QUOTE
   * IF (false and empty list are false)
+  * numerical comparison, gt, lt, gte, lte
+  * = and != comparison for all types
 
 * built-in functions
   * print and println
@@ -36,7 +38,6 @@ TODO
 ----
 
 * single 'quote syntax sugar
-* numerical and string comparison, gt, lt, etc...
 * lambdas (fn? lambda?)
 * vector goodies
   * vector->list
