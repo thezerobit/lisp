@@ -42,19 +42,6 @@ pointer cdr(pointer p);
 pointer reverse(pointer p);
 int count(pointer p);
 
-/* Symbol */
-
-struct symbol {
-  char * name;
-};
-
-typedef struct symbol * Symbol;
-
-int is_symbol(pointer p);
-pointer new_symbol(char * name);
-Symbol get_symbol(pointer p);
-int is_symbol_equal(pointer p, pointer o);
-
 /* Other */
 
 typedef struct {

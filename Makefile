@@ -1,8 +1,8 @@
 CC=gcc
 CFLAGS=-I.
 
-lisp: lisp.o env.o
-	$(CC) -o lisp lisp.o env.o -I. -lgc -lreadline
+lisp: lisp.o env.o symbol.o
+	$(CC) -o lisp lisp.o env.o symbol.o -I. -lgc -lreadline
 
 clean:
 	rm -f *.o

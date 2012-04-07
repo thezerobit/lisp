@@ -1,8 +1,7 @@
-/* env */
-
 #include <stdio.h>
 #include <assert.h>
 #include "env.h"
+#include "symbol.h"
 
 pointer make_env() {
   return new_nil();
