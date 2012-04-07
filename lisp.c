@@ -7,35 +7,8 @@
 #include <stdint.h>
 #include <inttypes.h>
 
-#define TYPE_MASK    (0b011)
-
-#define TYPE_PAIR    (0b000)
-#define TYPE_NIL     (0b001)
-#define TYPE_SYMBOL  (0b010)
-#define TYPE_OTHER   (0b011)
-
-#define TYPE_INT     4
-#define TYPE_FUNC    5
-#define TYPE_STRING  6
-#define TYPE_VECTOR  7
-#define TYPE_BOOLEAN 8
-#define TYPE_LAMBDA  9
-
-typedef void * pointer;
-
-/* advanced declarations */
-
-void print_thing(pointer p);
-pointer ff_print(pointer args);
-
-pointer build_core_env();
-pointer read_first(const char * input);
-pointer read_from_string(const char * input);
-const char * get_string(pointer p);
-int is_lambda(pointer p);
-pointer add_env(pointer env, pointer sym, pointer value);
-pointer evaluate(pointer form, pointer env);
-pointer evaluate_list(pointer args, pointer env);
+#include "lisp.h"
+#include "env.h"
 
 /* nil == empty list */
 
@@ -49,12 +22,6 @@ pointer new_nil() {
 
 /* Pair */
 
-struct pair {
-  pointer car;
-  pointer cdr;
-};
-
-typedef struct pair * Pair;
 
 int is_pair(pointer p) {
   return p && (TYPE_MASK & (uint64_t)p) == TYPE_PAIR;
@@ -113,12 +80,6 @@ int count(pointer p) {
 
 /* Symbol */
 
-struct symbol {
-  char * name;
-};
-
-typedef struct symbol * Symbol;
-
 int is_symbol(pointer p) {
   return (TYPE_MASK & (uint64_t)p) == TYPE_SYMBOL;
 }
@@ -140,35 +101,6 @@ int is_symbol_equal(pointer p, pointer o) {
 }
 
 /* Other */
-
-typedef struct {
-  int count;
-  pointer * elems;
-} vector;
-
-typedef vector * Vector;
-
-typedef struct {
-  pointer arglist;
-  pointer body;
-  pointer env;
-} lambda;
-
-typedef lambda * Lambda;
-
-typedef struct {
-  int type;
-  union {
-    void * data;
-    int64_t int_num;
-    pointer (*ffunc)(pointer);
-    const char * str;
-    Vector vec;
-    Lambda lambda;
-  };
-} other;
-
-typedef other * Other;
 
 int is_other(pointer p) {
   return (TYPE_MASK & (uint64_t)p) == TYPE_OTHER;
@@ -469,84 +401,6 @@ void test_is_equal() {
   assert( is_equal(str3, str2));
 }
 
-/* functional map
- *
- * First rendition will just be built with lists, 'cause I'm lazy.
- */
-
-pointer new_map() {
-  return new_nil();
-}
-
-pointer assoc(pointer map, pointer sym, pointer value) {
-  return new_pair(new_pair(sym, new_pair(value, new_nil())), map);
-}
-
-pointer dissoc(pointer map, pointer sym) {
-  return assoc(map, sym, new_nil());
-}
-
-pointer get(pointer map, pointer sym) {
-  if(is_pair(map)) {
-    pointer first = car(map);
-    if(is_equal(car(first), sym)) {
-      return car(cdr(first));
-    } else {
-      return get(cdr(map), sym);
-    }
-  } else {
-    return new_nil();
-  }
-}
-
-void test_map() {
-  pointer m1 = new_map();
-  pointer m2 = assoc(m1, new_symbol("foo"), new_int(100));
-  pointer m3 = assoc(m2, new_int(2), new_int(200));
-  pointer m4 = assoc(m2, new_symbol("foo"), new_int(300));
-  assert(is_equal(new_int(100), get(m2, new_symbol("foo"))));
-  assert(is_equal(new_int(200), get(m3, new_int(2))));
-  assert(is_equal(new_int(100), get(m3, new_symbol("foo"))));
-  assert(is_equal(new_int(300), get(m4, new_symbol("foo"))));
-  assert(is_equal(new_nil(),    get(m4, new_symbol("baz"))));
-}
-
-/* env */
-
-pointer make_env() {
-  return new_nil();
-}
-
-pointer add_env(pointer env, pointer sym, pointer value) {
-  return new_pair(new_pair(sym, new_pair(value, new_nil())), env);
-}
-
-pointer lookup_env(pointer env, pointer sym) {
-  if(is_pair(env)) {
-    pointer first = car(env);
-    if(is_symbol_equal(car(first), sym)) {
-      return car(cdr(first));
-    } else {
-      return lookup_env(cdr(env), sym);
-    }
-  } else {
-    printf("symbol not found: %s\n", get_symbol(sym)->name);
-    assert(0);
-    return NULL;
-  }
-}
-
-void test_env() {
-  pointer e1 = make_env();
-  pointer e2 = add_env(e1, new_symbol("foo"), new_int(100));
-  pointer e3 = add_env(e2, new_symbol("bar"), new_int(200));
-  pointer e4 = add_env(e2, new_symbol("foo"), new_int(300));
-  assert(is_equal(new_int(100), lookup_env(e2, new_symbol("foo"))));
-  assert(is_equal(new_int(200), lookup_env(e3, new_symbol("bar"))));
-  assert(is_equal(new_int(100), lookup_env(e3, new_symbol("foo"))));
-  assert(is_equal(new_int(300), lookup_env(e4, new_symbol("foo"))));
-}
-
 /* evaluate */
 
 pointer SYMBOL_QUOTE;
@@ -677,12 +531,6 @@ void test_evaluate() {
 
 /* read */
 
-typedef struct {
-  const char * loc;
-  int line;
-  int col;
-} read_pointer;
-
 int is_alpha(char c) {
   int ic = (int)c;
   return (ic >= 65 && ic <= 90) || (ic >= 97 && ic <= 122);
@@ -734,9 +582,6 @@ int read_required(read_pointer * rp, char c) {
   }
   return 0;
 }
-
-pointer read_pair(read_pointer * rp);
-pointer read_vec(read_pointer * rp);
 
 pointer read_symbol(read_pointer * rp) {
   int length = 0;
@@ -1112,7 +957,6 @@ int main() {
 
   init_globals();
   test_is_equal();
-  test_map();
   test_env();
   test_func();
   test_evaluate();
