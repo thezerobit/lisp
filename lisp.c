@@ -930,6 +930,7 @@ pointer build_core_env() {
 
 int main() {
 
+  init_symbols();
   init_globals();
   test_is_equal();
   test_env();

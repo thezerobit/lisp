@@ -9,6 +9,7 @@ struct symbol {
 
 typedef struct symbol * Symbol;
 
+void init_symbols();
 int is_symbol(pointer p);
 pointer new_symbol(char * name);
 Symbol get_symbol(pointer p);
