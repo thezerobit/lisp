@@ -20,6 +20,7 @@
 #define TYPE_VECTOR  7
 #define TYPE_BOOLEAN 8
 #define TYPE_LAMBDA  9
+#define TYPE_REF     10
 
 typedef void * pointer;
 
@@ -165,6 +166,7 @@ typedef struct {
     const char * str;
     Vector vec;
     Lambda lambda;
+    pointer object; // for Ref type
   };
 } other;
 
@@ -392,6 +394,19 @@ pointer call_lambda(Lambda l, pointer arglist) {
   return result;
 }
 
+/* Ref */
+
+int is_ref(pointer p) {
+  return is_other(p) && get_other(p)->type == TYPE_REF;
+}
+
+pointer new_ref(pointer obj) {
+  Other o = (Other)GC_MALLOC(sizeof(other));
+  o->type = TYPE_REF;
+  o->object = obj;
+  return (pointer)((uint64_t)o | TYPE_OTHER);
+}
+
 /* Equality */
 
 int is_equal(pointer p, pointer o) {
@@ -556,6 +571,10 @@ pointer SYMBOL_FALSE;
 pointer BOOLEAN_TRUE;
 pointer BOOLEAN_FALSE;
 pointer SYMBOL_LAMBDA;
+pointer SYMBOL_DEF;
+pointer SYMBOL_REF;
+pointer SYMBOL_DEREF;
+pointer SYMBOL_REFSET;
 
 void init_globals() {
   SYMBOL_QUOTE = new_symbol("quote");
@@ -565,6 +584,10 @@ void init_globals() {
   BOOLEAN_TRUE = new_boolean(1);
   BOOLEAN_FALSE = new_boolean(0);
   SYMBOL_LAMBDA = new_symbol("lambda");
+  SYMBOL_DEF = new_symbol("def");
+  SYMBOL_REF = new_symbol("ref");
+  SYMBOL_DEREF = new_symbol("deref");
+  SYMBOL_REFSET = new_symbol("set!");
 }
 
 pointer evaluate_list(pointer args, pointer env) {

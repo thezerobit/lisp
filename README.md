@@ -38,6 +38,7 @@ Things That Are Done
 TODO
 ----
 
+* tail recursion
 * single 'quote syntax sugar
 * begin / do / progn
 * vector goodies
@@ -49,6 +50,8 @@ TODO
 * macros
 * local bindings (LET)
 * top level bindings (DEF, DEFUN)
+  * re-bindable?
+* Mutable Ref type
 * keywords
 * compilation
 
