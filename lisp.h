@@ -55,24 +55,7 @@ pointer new_symbol(char * name);
 Symbol get_symbol(pointer p);
 int is_symbol_equal(pointer p, pointer o);
 
-/* Vector */
-
-typedef struct {
-  int count;
-  pointer * elems;
-} vector;
-
-typedef vector * Vector;
-
 /* Other */
-
-typedef struct {
-  pointer arglist;
-  pointer body;
-  pointer env;
-} lambda;
-
-typedef lambda * Lambda;
 
 typedef struct {
   int type;
@@ -81,8 +64,6 @@ typedef struct {
     int64_t int_num;
     pointer (*ffunc)(pointer);
     const char * str;
-    Vector vec;
-    Lambda lambda;
   };
 } other;
 
@@ -113,9 +94,17 @@ const char * get_string(pointer p);
 
 /* Vector */
 
+typedef struct {
+  int type;
+  int count;
+  pointer * elems;
+} vector;
+
+typedef vector * Vector;
+
 int is_vector(pointer p);
 Vector get_vector(pointer p);
-Other alloc_vector(int size);
+Vector alloc_vector(int size);
 pointer new_vector_from_list(pointer list);
 pointer vector_get(pointer v, pointer offset);
 pointer ff_vector_ref(pointer l);
@@ -128,6 +117,15 @@ pointer new_boolean(int b);
 int get_boolean(pointer p);
 
 /* Lambda */
+
+typedef struct {
+  int type;
+  pointer arglist;
+  pointer body;
+  pointer env;
+} lambda;
+
+typedef lambda * Lambda;
 
 int is_lambda(pointer p);
 pointer new_lambda(pointer arglist, pointer body, pointer env);

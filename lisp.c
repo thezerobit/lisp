@@ -127,8 +127,8 @@ int is_other_equal(pointer p, pointer o) {
       case TYPE_STRING:
         return strcmp(a->str, b->str) == 0;
       case TYPE_VECTOR:
-        v1 = a->vec;
-        v2 = b->vec;
+        v1 = (Vector)a;
+        v2 = (Vector)b;
         if(v1->count != v1->count) {
           return 0;
         } else {
@@ -215,28 +215,27 @@ int is_vector(pointer p) {
 
 Vector get_vector(pointer p) {
   assert(is_vector(p));
-  return get_other(p)->vec;
+  return (Vector)((uint64_t)p & ~(uint64_t)TYPE_MASK);
 }
 
-Other alloc_vector(int size) {
-  Other o = (Other)GC_MALLOC(sizeof(other));
-  o->type = TYPE_VECTOR;
-  o->vec = (Vector)GC_MALLOC(sizeof(vector));
-  o->vec->count = size;
-  o->vec->elems = (pointer *)GC_MALLOC(sizeof(pointer) * size);
-  return o;
+Vector alloc_vector(int size) {
+  Vector v = (Vector)GC_MALLOC(sizeof(vector));
+  v->type = TYPE_VECTOR;
+  v->count = size;
+  v->elems = (pointer *)GC_MALLOC(sizeof(pointer) * size);
+  return v;
 }
 
 pointer new_vector_from_list(pointer list) {
   assert(is_pair(list));
-  Other o = alloc_vector(count(list));
+  Vector vec = alloc_vector(count(list));
   pointer next = list;
   int offset = 0;
   while(is_pair(next)) {
-    o->vec->elems[offset++] = car(next);
+    vec->elems[offset++] = car(next);
     next = cdr(next);
   }
-  return (pointer)((uint64_t)o | TYPE_OTHER);
+  return (pointer)((uint64_t)vec | TYPE_OTHER);
 }
 
 pointer vector_get(pointer v, pointer offset) {
@@ -286,19 +285,17 @@ int is_lambda(pointer p) {
 }
 
 pointer new_lambda(pointer arglist, pointer body, pointer env) {
-  Other o = (Other)GC_MALLOC(sizeof(other));
-  o->type = TYPE_LAMBDA;
-  o->lambda = (Lambda)GC_MALLOC(sizeof(lambda));
-  Lambda l = o->lambda;
+  Lambda l = (Lambda)GC_MALLOC(sizeof(lambda));
+  l->type = TYPE_LAMBDA;
   l->arglist = arglist;
   l->body = body;
   l->env = env;
-  return (pointer)((uint64_t)o | TYPE_OTHER);
+  return (pointer)((uint64_t)l | TYPE_OTHER);
 }
 
 Lambda get_lambda(pointer p) {
   assert(is_lambda(p));
-  return get_other(p)->lambda;
+  return (Lambda)((uint64_t)p & ~(uint64_t)TYPE_MASK);
 }
 
 pointer call_lambda(Lambda l, pointer arglist) {
@@ -432,13 +429,12 @@ pointer evaluate_list(pointer args, pointer env) {
 pointer evaluate_vector(pointer v, pointer env) {
   assert(is_vector(v));
   Vector old_vec = get_vector(v);
-  Other o = alloc_vector(old_vec->count);
-  Vector new_vec = o->vec;
+  Vector new_vec = alloc_vector(old_vec->count);
   int i;
   for(i = 0; i < old_vec->count; ++ i) {
     new_vec->elems[i] = evaluate(old_vec->elems[i], env);
   }
-  return (pointer)((uint64_t)o | TYPE_OTHER);
+  return (pointer)((uint64_t)new_vec | TYPE_OTHER);
 }
 
 pointer read_first(const char * input) {
