@@ -102,6 +102,7 @@ pointer new_int(int64_t num) {
 }
 
 int64_t get_int(pointer p) {
+  Other o = (Other)p;
   assert(is_int(p));
   return get_other(p)->int_num;
 }
@@ -367,7 +368,6 @@ void test_is_equal() {
 
 /* evaluate */
 
-
 pointer SYMBOL_QUOTE;
 pointer SYMBOL_IF;
 pointer SYMBOL_TRUE;
@@ -376,6 +376,7 @@ pointer BOOLEAN_TRUE;
 pointer BOOLEAN_FALSE;
 pointer SYMBOL_LAMBDA;
 pointer SYMBOL_DEF;
+pointer SYMBOL_SYS;
 
 void init_globals() {
   NIL = GC_MALLOC(sizeof(int));
@@ -388,6 +389,7 @@ void init_globals() {
   BOOLEAN_FALSE = new_boolean(0);
   SYMBOL_LAMBDA = new_symbol("lambda");
   SYMBOL_DEF = new_symbol("def");
+  SYMBOL_SYS = new_symbol("sys");
 }
 
 pointer evaluate_list(pointer args, pointer env) {
@@ -414,69 +416,73 @@ pointer read_first(const char * input) {
   return car(l);
 }
 
-pointer evaluate(pointer form, pointer env) {
-  /* printf("evaluating: "); print_thing(form); printf("\n"); */
-  if(is_symbol(form)) {
-    return lookup_env(env, form);
-  } else if(is_nil(form)) {
-    return form;
-  } else if(is_other(form)) {
-    Other o_form = get_other(form);
-    switch(o_form->type) {
-      case TYPE_VECTOR:
-        return evaluate_vector(form, env);
-        break;
-      default:
-        return form;
-    }
-  } else { /* pair */
-    pointer first = car(form);
-    /* IF */
-    if(is_symbol_equal(first, SYMBOL_IF)) {
-      int length = count(cdr(form));
-      assert(length == 2 || length == 3);
-      pointer second = evaluate(car(cdr(form)), env);
-      if(is_nil(second) || second == BOOLEAN_FALSE) {
-        if(length > 2) {
-          return evaluate(car(cdr(cdr(cdr(form)))), env);
-        } else {
-          return new_nil();
-        }
+pointer evaluate_pair(pointer form, pointer env) {
+  pointer first = car(form);
+  /* IF */
+  if(is_symbol_equal(first, SYMBOL_IF)) {
+    int length = count(cdr(form));
+    assert(length == 2 || length == 3);
+    pointer second = evaluate(car(cdr(form)), env);
+    if(is_nil(second) || second == BOOLEAN_FALSE) {
+      if(length > 2) {
+        return evaluate(car(cdr(cdr(cdr(form)))), env);
       } else {
-        return evaluate(car(cdr(cdr(form))), env);
+        return new_nil();
       }
+    } else {
+      return evaluate(car(cdr(cdr(form))), env);
     }
-    /* QUOTE */
-    if(is_symbol_equal(first, SYMBOL_QUOTE)) {
-      return car(cdr(form)); // unevaluated
-    }
-    /* LAMBDA */
-    if(is_symbol_equal(first, SYMBOL_LAMBDA)) {
-      pointer rest = cdr(form);
-      return new_lambda(car(rest), cdr(rest), env); // unevaluated
-    }
-    /* DEF */
-    if(is_symbol_equal(first, SYMBOL_DEF)) {
-      pointer def_name = car(cdr(form));
-      assert(is_symbol(def_name));
-      pointer def_form = evaluate(car(cdr(cdr(form))), env);
-      /* printf("Setting '"); print_thing(def_name); printf("' to '"); */
-      /* print_thing(def_form);printf("'\n"); */
-      /* print_thing(env);printf("\n"); */
-      def_env(env, def_name, def_form);
-      /* print_thing(env);printf("\n"); */
-      return def_form;
-    }
-    pointer first_eval = evaluate(car(form), env);
-    /* WRAPPED C FUNCTION */
-    if(is_func(first_eval)) {
-      return call_func(first_eval, evaluate_list(cdr(form), env));
-    }
-    if(is_lambda(first_eval)) {
-      return call_lambda(get_lambda(first_eval), evaluate_list(cdr(form), env));
-    }
-    /* TODO: macros */
-    return form;
+  }
+  /* QUOTE */
+  if(is_symbol_equal(first, SYMBOL_QUOTE)) {
+    return car(cdr(form)); // unevaluated
+  }
+  /* LAMBDA */
+  if(is_symbol_equal(first, SYMBOL_LAMBDA)) {
+    pointer rest = cdr(form);
+    return new_lambda(car(rest), cdr(rest), env); // unevaluated
+  }
+  /* DEF */
+  if(is_symbol_equal(first, SYMBOL_DEF)) {
+    pointer def_name = car(cdr(form));
+    assert(is_symbol(def_name));
+    pointer def_form = evaluate(car(cdr(cdr(form))), env);
+    def_env(env, def_name, def_form);
+    return def_form;
+  }
+  /* SYS */
+  if(is_symbol_equal(first, SYMBOL_SYS)) {
+    print_thing(env);printf("\n");
+    return new_nil();
+  }
+  pointer first_eval = evaluate(car(form), env);
+  /* WRAPPED C FUNCTION */
+  if(is_func(first_eval)) {
+    return call_func(first_eval, evaluate_list(cdr(form), env));
+  }
+  if(is_lambda(first_eval)) {
+    return call_lambda(get_lambda(first_eval), evaluate_list(cdr(form), env));
+  }
+  /* TODO: macros */
+  printf("first: "); print_thing(first); printf("\n");
+  printf("first_eval: "); print_thing(first_eval); printf("\n");
+  printf("What is this?: "); print_thing(form); printf("\n");
+    print_thing(env);printf("\n");
+  assert(0);
+  return form;
+}
+
+pointer evaluate(pointer form, pointer env) {
+  Other o = get_other(form);
+  switch(o->type) {
+    case TYPE_PAIR:
+      return evaluate_pair(form, env);
+    case TYPE_SYMBOL:
+      return lookup_env(env, form);
+    case TYPE_VECTOR:
+      return evaluate_vector(form, env);
+    default:
+      return form;
   }
 }
 
@@ -932,6 +938,8 @@ pointer build_core_env() {
   def_env(env, new_symbol("!="), new_func(ff_neq));
   def_env(env, new_symbol("vector"), new_func(new_vector_from_list));
   def_env(env, new_symbol("vector-ref"), new_func(ff_vector_ref));
+  def_env(env, new_symbol("fib"),
+      evaluate(read_first("(lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))"), env));
   return env;
 }
 
@@ -944,6 +952,13 @@ void init_gc() {
    */
   putenv("G_SLICE=always-malloc");
   putenv("G_DEBUG=gc-friendly");
+
+  GMemVTable mem;
+  memset(&mem, 0, sizeof(GMemVTable));
+  mem.malloc  = GC_malloc;
+  mem.realloc = GC_realloc;
+  mem.free    = GC_free;
+  g_mem_set_vtable(&mem);
 }
 
 /* the rest */

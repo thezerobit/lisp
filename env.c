@@ -43,6 +43,8 @@ pointer lookup_scope(pointer scope, pointer sym) {
 }
 
 pointer lookup_env(pointer env, pointer sym) {
+  /* printf("lookup_env %s", get_symbol(sym)->name); */
+  /* printf(" in "); print_thing(env); printf("\n"); */
   pointer scope = car(env);
   pointer found = lookup_scope(scope, sym);
   if(found != NULL) {

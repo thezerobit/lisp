@@ -18,10 +18,10 @@ gboolean object_compare(gconstpointer v1, gconstpointer v2) {
   return is_equal(p1, p2);
 }
 
-void mutable_hash_finalize(void * obj, void * cd) {
-  Other o = get_other((pointer)obj);
-  g_hash_table_destroy(o->mut_hash);
-}
+/* void mutable_hash_finalize(void * obj, void * cd) { */
+/*   Other o = get_other((pointer)obj); */
+/*   g_hash_table_destroy(o->mut_hash); */
+/* } */
 
 int is_mutable_hash(pointer p) {
   return is_other(p) && get_other(p)->type == TYPE_MUTABLE_HASH;
@@ -32,7 +32,7 @@ pointer new_mutable_hash() {
   o->type = TYPE_MUTABLE_HASH;
   o->mut_hash = g_hash_table_new(object_hash, object_compare);
   // tell Glib to free the hash table when this object gets collected
-  GC_REGISTER_FINALIZER(o->mut_hash, mutable_hash_finalize, 0, 0, 0);
+  /* GC_REGISTER_FINALIZER(o->mut_hash, mutable_hash_finalize, 0, 0, 0); */
   return (pointer)((uint64_t)o | TYPE_OTHER);
 }
 
