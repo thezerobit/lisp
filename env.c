@@ -29,6 +29,24 @@ pointer def_env(pointer env, pointer sym, pointer value) {
   return env;
 }
 
+/* terrible hack for letrec */
+pointer set_env(pointer env, pointer sym, pointer value) {
+  pointer scope = car(env);
+  while(is_pair(scope)) {
+    pointer binding = car(scope);
+    pointer symbol_found = car(binding);
+    if(is_symbol_equal(symbol_found, sym)) {
+      pointer old_val = car(cdr(binding));
+      assert(old_val == NIL /* letrec shouldn't repeat bindings */);
+      set_car(cdr(binding), value);
+      return env;
+    }
+    scope = cdr(scope);
+  }
+  assert(0);
+  return env;
+}
+
 pointer lookup_scope(pointer scope, pointer sym) {
   if(is_pair(scope)) {
     pointer first = car(scope);

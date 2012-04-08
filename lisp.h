@@ -26,6 +26,18 @@ typedef GHashTable * MutableHash;
 /* nil */
 
 pointer NIL;
+pointer SYMBOL_QUOTE;
+pointer SYMBOL_IF;
+pointer SYMBOL_TRUE;
+pointer SYMBOL_FALSE;
+pointer BOOLEAN_TRUE;
+pointer BOOLEAN_FALSE;
+pointer SYMBOL_LAMBDA;
+pointer SYMBOL_DEF;
+pointer SYMBOL_SYS;
+pointer SYMBOL_LET;
+pointer SYMBOL_LET_STAR;
+pointer SYMBOL_LETREC;
 
 int is_nil (pointer p);
 pointer new_nil();
@@ -45,6 +57,7 @@ Pair get_pair(pointer p);
 pointer new_pair(pointer car, pointer cdr);
 pointer car(pointer p);
 pointer cdr(pointer p);
+pointer set_car(pointer p, pointer val);
 pointer reverse(pointer p);
 int count(pointer p);
 
@@ -128,7 +141,7 @@ pointer call_lambda(Lambda l, pointer arglist);
 
 /* Let */
 pointer let_split(pointer defs);
-pointer evaluate_let(pointer both, pointer env, int star);
+pointer evaluate_let(pointer both, pointer env, pointer which);
 
 /* Equality */
 

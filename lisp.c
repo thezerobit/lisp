@@ -54,6 +54,13 @@ pointer cdr(pointer p) {
   return pair->cdr;
 }
 
+/* hack for letrec */
+pointer set_car(pointer p, pointer val) {
+  Pair pair = get_pair(p);
+  pair->car = val;
+  return pair;
+}
+
 pointer reverse(pointer p) {
   pointer last = new_nil();
   while(!is_nil(p)) {
@@ -269,39 +276,44 @@ pointer call_lambda(Lambda l, pointer arglist) {
 /**
  * (a 10 b 20 c 30) -> ((a b c) (10 20 30))
  */
-pointer let_split(pointer defs) {
+pointer get_letrec_env(pointer defs, pointer env) {
   int c = count(defs);
   assert(c % 2 == 0);
-  pointer lh = NIL;
-  pointer rh = NIL;
   while(is_pair(defs)) {
-    lh = new_pair(car(defs), lh);
-    defs = cdr(defs);
-    rh = new_pair(car(defs), rh);
-    defs = cdr(defs);
+    env = add_env(env, car(defs), NIL);
+    defs = cdr(cdr(defs));
   }
-  return new_pair(lh, new_pair(rh, NIL));
+  return env;
 }
 
-pointer evaluate_let(pointer both, pointer env, int star) {
+pointer evaluate_let(pointer both, pointer env, pointer which) {
   pointer defs = car(both);
   pointer body = cdr(both);
   int c = count(defs);
   assert(c % 2 == 0);
   pointer new_env = env;
   pointer lh, rh;
+  if(is_symbol_equal(which, SYMBOL_LETREC)) {
+    new_env = get_letrec_env(defs, env);
+  }
 
   while(is_pair(defs)) {
     lh = car(defs);
     assert(is_symbol(lh));
     defs = cdr(defs);
-    if(star) {
+    if(is_symbol_equal(which, SYMBOL_LET_STAR)) {
       rh = evaluate(car(defs), new_env);
-    } else {
+      new_env = add_env(new_env, lh, rh);
+    }
+    if(is_symbol_equal(which, SYMBOL_LET)) {
       rh = evaluate(car(defs), env);
+      new_env = add_env(new_env, lh, rh);
+    }
+    if(is_symbol_equal(which, SYMBOL_LETREC)) {
+      rh = evaluate(car(defs), new_env);
+      set_env(new_env, lh, rh);
     }
     defs = cdr(defs);
-    new_env = add_env(new_env, lh, rh);
   }
   return evaluate_block(body, new_env);
 }
@@ -411,19 +423,6 @@ void test_is_equal() {
 
 /* evaluate */
 
-pointer SYMBOL_QUOTE;
-pointer SYMBOL_IF;
-pointer SYMBOL_TRUE;
-pointer SYMBOL_FALSE;
-pointer BOOLEAN_TRUE;
-pointer BOOLEAN_FALSE;
-pointer SYMBOL_LAMBDA;
-pointer SYMBOL_DEF;
-pointer SYMBOL_SYS;
-pointer SYMBOL_LET;
-pointer SYMBOL_LET_STAR;
-pointer SYMBOL_LETREC;
-
 void init_globals() {
   NIL = GC_MALLOC(sizeof(int));
   ((Other)NIL)->type = TYPE_NIL;
@@ -506,11 +505,15 @@ pointer evaluate_pair(pointer form, pointer env) {
   }
   /* LET */
   if(is_symbol_equal(first, SYMBOL_LET)) {
-    return evaluate_let(cdr(form), env, 0);
+    return evaluate_let(cdr(form), env, SYMBOL_LET);
   }
   /* LET* */
   if(is_symbol_equal(first, SYMBOL_LET_STAR)) {
-    return evaluate_let(cdr(form), env, 1);
+    return evaluate_let(cdr(form), env, SYMBOL_LET_STAR);
+  }
+  /* LETREC */
+  if(is_symbol_equal(first, SYMBOL_LETREC)) {
+    return evaluate_let(cdr(form), env, SYMBOL_LETREC);
   }
   pointer first_eval = evaluate(car(form), env);
   /* WRAPPED C FUNCTION */
@@ -543,6 +546,10 @@ pointer evaluate(pointer form, pointer env) {
   }
 }
 
+pointer e(char * code, pointer env) {
+  return evaluate(read_first(code), env);
+}
+
 void test_evaluate() {
   pointer env = build_core_env();
 
@@ -566,6 +573,11 @@ void test_evaluate() {
   assert(is_equal(BOOLEAN_TRUE, evaluate(read_first("(> 10 3)"), env)));
   assert(is_equal(BOOLEAN_FALSE, evaluate(read_first("(<= 10 3)"), env)));
   assert(is_equal(new_int(99), evaluate(read_first("((lambda (x) (* x 3)) 33)"), env)));
+
+  assert(is_equal(new_int(10), e("(let (a 10) (let (a 20 b a) b))", env)));
+  assert(is_equal(new_int(20), e("(let (a 10) (let* (a 20 b a) b))", env)));
+  assert(is_equal(new_int(20), e("(let (a 10) (letrec (a 20 b a) b))", env)));
+  assert(is_equal(new_int(20), e("(letrec (a (lambda () b) b 20) (a))", env)));
 }
 
 /* read */

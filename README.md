@@ -29,10 +29,11 @@ Things That Are Done
   * = and != comparison for all types
   * lambda
   * def : mutable top-level scope
+  * let, let\* and letrec
 
 * built-in functions
   * print and println
-  * integer math: + - * /
+  * integer math: + - \* /
 
 * rudimentary REPL
 
@@ -48,7 +49,6 @@ TODO
   * language support
   * literal syntax
 * macros
-* local bindings (LET)
 * defn / defun
 * keywords
 * compilation
