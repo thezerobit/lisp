@@ -7,11 +7,10 @@
 
 #define TYPE_MASK    (0b011)
 
-#define TYPE_PAIR    (0b000)
-#define TYPE_NIL     (0b001)
-#define TYPE_SYMBOL  (0b010)
-#define TYPE_OTHER   (0b011)
-
+#define TYPE_PAIR    0
+#define TYPE_NIL     1
+#define TYPE_SYMBOL  2
+#define TYPE_OTHER   3
 #define TYPE_INT     4
 #define TYPE_FUNC    5
 #define TYPE_STRING  6
@@ -26,17 +25,20 @@ typedef GHashTable * MutableHash;
 
 /* nil */
 
+pointer NIL;
+
 int is_nil (pointer p);
 pointer new_nil();
 
 /* Pair */
 
-struct pair {
+typedef struct {
+  int type;
   pointer car;
   pointer cdr;
-};
+} pair;
 
-typedef struct pair * Pair;
+typedef pair * Pair;
 
 int is_pair(pointer p);
 Pair get_pair(pointer p);
@@ -63,7 +65,6 @@ typedef other * Other;
 
 int is_other(pointer p);
 Other get_other(pointer p);
-int is_other_equal(pointer p, pointer o);
 
 /* Int */
 

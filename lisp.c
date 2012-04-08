@@ -14,22 +14,20 @@
 /* nil == empty list */
 
 int is_nil (pointer p) {
-  return (TYPE_MASK & (uint64_t)p) == TYPE_NIL;
+  return p == NIL;
 }
 
 pointer new_nil() {
-  return (pointer)((uint64_t)NULL | TYPE_NIL);
+  return NIL;
 }
 
 /* Pair */
 
-
 int is_pair(pointer p) {
-  return p && (TYPE_MASK & (uint64_t)p) == TYPE_PAIR;
+  return get_other(p)->type == TYPE_PAIR;
 }
 
 Pair get_pair(pointer p) {
-  assert(p);
   assert(is_pair(p));
   return (Pair)p;
 }
@@ -37,7 +35,7 @@ Pair get_pair(pointer p) {
 pointer new_pair(pointer car, pointer cdr) {
   assert(car);
   assert(cdr);
-  pointer p = GC_MALLOC(sizeof(struct pair));
+  pointer p = GC_MALLOC(sizeof(pair));
   Pair cell = get_pair(p);
   cell->car = car;
   cell->cdr = cdr;
@@ -82,53 +80,17 @@ int count(pointer p) {
 /* Other */
 
 int is_other(pointer p) {
-  return (TYPE_MASK & (uint64_t)p) == TYPE_OTHER;
+  return get_other(p)->type >= TYPE_OTHER;
 }
 
 Other get_other(pointer p) {
   return (Other)((uint64_t)p & ~(uint64_t)TYPE_MASK);
 }
 
-int is_other_equal(pointer p, pointer o) {
-  Other a = get_other(p);
-  Other b = get_other(o);
-  Vector v1, v2;
-  int i, c;
-  if(a->type != b->type) {
-    return 0;
-  } else {
-    switch(a->type) {
-      case TYPE_INT:
-        return (a->int_num == b->int_num);
-        break;
-      case TYPE_FUNC:
-        return (a->ffunc == b->ffunc);
-      case TYPE_STRING:
-        return strcmp(a->str, b->str) == 0;
-      case TYPE_VECTOR:
-        v1 = (Vector)a;
-        v2 = (Vector)b;
-        if(v1->count != v1->count) {
-          return 0;
-        } else {
-          c = v1->count;
-          for(i = 0; i < c; ++ i) {
-            if(!is_equal(v1->elems[i], v2->elems[i])) {
-              return 0;
-            }
-          }
-          return 1;
-        }
-      default:
-        return 0;
-    }
-  }
-}
-
 /* Int */
 
 int is_int(pointer p) {
-  return is_other(p) && get_other(p)->type == TYPE_INT;
+  return get_other(p)->type == TYPE_INT;
 }
 
 pointer new_int(int64_t num) {
@@ -136,7 +98,7 @@ pointer new_int(int64_t num) {
   /* printf("creating int: %llu \n", num); */
   o->type = TYPE_INT;
   o->int_num = num;
-  return (pointer)((uint64_t)o | TYPE_OTHER);
+  return (pointer)o;
 }
 
 int64_t get_int(pointer p) {
@@ -147,14 +109,14 @@ int64_t get_int(pointer p) {
 /* Func */
 
 int is_func(pointer p) {
-  return is_other(p) && get_other(p)->type == TYPE_FUNC;
+  return get_other(p)->type == TYPE_FUNC;
 }
 
 pointer new_func(pointer (*f)(pointer)) {
   Other o = (Other)GC_MALLOC(sizeof(other));
   o->type = TYPE_FUNC;
   o->ffunc = f;
-  return (pointer)((uint64_t)o | TYPE_OTHER);
+  return (pointer)o;
 }
 
 pointer call_func(pointer f, pointer arglist) {
@@ -171,14 +133,14 @@ void test_func() {
 /* String */
 
 int is_string(pointer p) {
-  return is_other(p) && get_other(p)->type == TYPE_STRING;
+  return get_other(p)->type == TYPE_STRING;
 }
 
 pointer new_string(const char * s) {
   Other o = (Other)GC_MALLOC(sizeof(other));
   o->type = TYPE_STRING;
   o->str = s;
-  return (pointer)((uint64_t)o | TYPE_OTHER);
+  return (pointer)o;
 }
 
 const char * get_string(pointer p) {
@@ -189,7 +151,7 @@ const char * get_string(pointer p) {
 /* Vector */
 
 int is_vector(pointer p) {
-  return is_other(p) && get_other(p)->type == TYPE_VECTOR;
+  return get_other(p)->type == TYPE_VECTOR;
 }
 
 Vector get_vector(pointer p) {
@@ -214,7 +176,7 @@ pointer new_vector_from_list(pointer list) {
     vec->elems[offset++] = car(next);
     next = cdr(next);
   }
-  return (pointer)((uint64_t)vec | TYPE_OTHER);
+  return (pointer)vec;
 }
 
 pointer vector_get(pointer v, pointer offset) {
@@ -242,14 +204,14 @@ void test_vector() {
 /* Boolean */
 
 int is_boolean(pointer p) {
-  return is_other(p) && get_other(p)->type == TYPE_BOOLEAN;
+  return get_other(p)->type == TYPE_BOOLEAN;
 }
 
 pointer new_boolean(int b) {
   Other o = (Other)GC_MALLOC(sizeof(other));
   o->type = TYPE_BOOLEAN;
   o->int_num = (uint64_t)b;
-  return (pointer)((uint64_t)o | TYPE_OTHER);
+  return (pointer)o;
 }
 
 int get_boolean(pointer p) {
@@ -260,7 +222,7 @@ int get_boolean(pointer p) {
 /* Lambda */
 
 int is_lambda(pointer p) {
-  return is_other(p) && get_other(p)->type == TYPE_LAMBDA;
+  return get_other(p)->type == TYPE_LAMBDA;
 }
 
 pointer new_lambda(pointer arglist, pointer body, pointer env) {
@@ -269,12 +231,12 @@ pointer new_lambda(pointer arglist, pointer body, pointer env) {
   l->arglist = arglist;
   l->body = body;
   l->env = env;
-  return (pointer)((uint64_t)l | TYPE_OTHER);
+  return (pointer)l;
 }
 
 Lambda get_lambda(pointer p) {
   assert(is_lambda(p));
-  return (Lambda)((uint64_t)p & ~(uint64_t)TYPE_MASK);
+  return (Lambda)p;
 }
 
 pointer call_lambda(Lambda l, pointer arglist) {
@@ -303,12 +265,18 @@ pointer call_lambda(Lambda l, pointer arglist) {
 /* Equality */
 
 int is_equal(pointer p, pointer o) {
+  Vector v1;
+  Vector v2;
+  int c, i;
   if(p == o) {
     return 1;
-  } else if((TYPE_MASK & (uint64_t)p) != (TYPE_MASK & (uint64_t)o)) {
+  }
+  Other a = (Other)p;
+  Other b = (Other)o;
+  if(a->type != b->type) {
     return 0;
   } else {
-    switch(TYPE_MASK & (uint64_t)p) {
+    switch(a->type) {
       case TYPE_PAIR:
         return is_equal(car(p), car(o)) && is_equal(cdr(p), cdr(o));
         break;
@@ -319,9 +287,29 @@ int is_equal(pointer p, pointer o) {
       case TYPE_SYMBOL:
         return is_symbol_equal(p, o);
         break;
-      case TYPE_OTHER:
+      case TYPE_INT:
+        return (a->int_num == b->int_num);
+        break;
+      case TYPE_FUNC:
+        return (a->ffunc == b->ffunc);
+      case TYPE_STRING:
+        return strcmp(a->str, b->str) == 0;
+      case TYPE_VECTOR:
+        v1 = (Vector)a;
+        v2 = (Vector)b;
+        if(v1->count != v1->count) {
+          return 0;
+        } else {
+          c = v1->count;
+          for(i = 0; i < c; ++ i) {
+            if(!is_equal(v1->elems[i], v2->elems[i])) {
+              return 0;
+            }
+          }
+          return 1;
+        }
       default:
-        return is_other_equal(p, o);
+        return 0;
         break;
     }
   }
@@ -390,6 +378,8 @@ pointer SYMBOL_LAMBDA;
 pointer SYMBOL_DEF;
 
 void init_globals() {
+  NIL = GC_MALLOC(sizeof(int));
+  get_other(NIL)->type = TYPE_NIL;
   SYMBOL_QUOTE = new_symbol("quote");
   SYMBOL_IF = new_symbol("if");
   SYMBOL_TRUE = new_symbol("true");
@@ -416,7 +406,7 @@ pointer evaluate_vector(pointer v, pointer env) {
   for(i = 0; i < old_vec->count; ++ i) {
     new_vec->elems[i] = evaluate(old_vec->elems[i], env);
   }
-  return (pointer)((uint64_t)new_vec | TYPE_OTHER);
+  return (pointer)new_vec;
 }
 
 pointer read_first(const char * input) {
@@ -740,57 +730,58 @@ void print_thing(pointer p) {
   pointer n;
   int i;
   Vector v;
-  if(is_pair(p)) {
-    printf("(");
-    n = p;
-    do {
-      print_thing(car(n));
-      n = cdr(n);
-      if(is_pair(n)) {
-        printf(" ");
+  switch(get_other(p)->type) {
+    case TYPE_PAIR:
+      printf("(");
+      n = p;
+      do {
+        print_thing(car(n));
+        n = cdr(n);
+        if(is_pair(n)) {
+          printf(" ");
+        }
+      } while (is_pair(n));
+      printf(")");
+      break;
+    case TYPE_NIL:
+      printf("()");
+      break;
+    case TYPE_SYMBOL:
+      printf("%s", get_symbol(p)->name);
+      break;
+    case TYPE_INT:
+      printf("%" PRId64, get_int(p));
+      break;
+    case TYPE_FUNC:
+      printf("<foreign function>");
+      break;
+    case TYPE_STRING:
+      printf("\"%s\"", get_string(p));
+      break;
+    case TYPE_VECTOR:
+      printf("[");
+      v = get_vector(p);
+      for(i = 0; i < v->count; ++ i) {
+        print_thing(v->elems[i]);
+        if(i < v->count - 1) {
+          printf(" ");
+        }
       }
-    } while (is_pair(n));
-    printf(")");
-  } else if(is_symbol(p)) {
-    printf("%s", get_symbol(p)->name);
-  } else if(is_nil(p)) {
-    printf("()");
-  } else if(is_other(p)) {
-    switch(get_other(p)->type) {
-      case TYPE_INT:
-        printf("%" PRId64, get_int(p));
-        break;
-      case TYPE_FUNC:
-        printf("<foreign function>");
-        break;
-      case TYPE_STRING:
-        printf("\"%s\"", get_string(p));
-        break;
-      case TYPE_VECTOR:
-        printf("[");
-        v = get_vector(p);
-        for(i = 0; i < v->count; ++ i) {
-          print_thing(v->elems[i]);
-          if(i < v->count - 1) {
-            printf(" ");
-          }
-        }
-        printf("]");
-        break;
-      case TYPE_BOOLEAN:
-        if(p == BOOLEAN_TRUE) {
-          printf("true");
-        } else {
-          printf("false");
-        }
-        break;
-      case TYPE_MUTABLE_HASH:
-        print_mutable_hash(p);
-        break;
-      default:
-        printf("<unknown object>");
-        break;
-    }
+      printf("]");
+      break;
+    case TYPE_BOOLEAN:
+      if(p == BOOLEAN_TRUE) {
+        printf("true");
+      } else {
+        printf("false");
+      }
+      break;
+    case TYPE_MUTABLE_HASH:
+      print_mutable_hash(p);
+      break;
+    default:
+      printf("<unknown object>");
+      break;
   }
 }
 

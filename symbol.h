@@ -3,15 +3,16 @@
 
 #include "lisp.h"
 
-struct symbol {
-  char * name;
-};
+typedef struct {
+  int type;
+  const char * name;
+} symbol;
 
-typedef struct symbol * Symbol;
+typedef symbol * Symbol;
 
 void init_symbols();
 int is_symbol(pointer p);
-pointer new_symbol(char * name);
+pointer new_symbol(const char * name);
 Symbol get_symbol(pointer p);
 int is_symbol_equal(pointer p, pointer o);
 
