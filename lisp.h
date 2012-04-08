@@ -123,7 +123,12 @@ typedef lambda * Lambda;
 int is_lambda(pointer p);
 pointer new_lambda(pointer arglist, pointer body, pointer env);
 Lambda get_lambda(pointer p);
+pointer eval_block(pointer body, pointer env);
 pointer call_lambda(Lambda l, pointer arglist);
+
+/* Let */
+pointer let_split(pointer defs);
+pointer evaluate_let(pointer both, pointer env, int star);
 
 /* Equality */
 

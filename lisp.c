@@ -6,6 +6,8 @@
 #include <assert.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include "glib.h"
+#include <gio/gio.h>
 
 #include "lisp.h"
 #include "env.h"
@@ -236,6 +238,15 @@ Lambda get_lambda(pointer p) {
   return (Lambda)p;
 }
 
+pointer evaluate_block(pointer body, pointer env) {
+  pointer result = NIL;
+  while(is_pair(body)) {
+    result = evaluate(car(body), env);
+    body = cdr(body);
+  }
+  return result;
+}
+
 pointer call_lambda(Lambda l, pointer arglist) {
   // build env from arglist
   assert(count(arglist) == count(l->arglist));
@@ -250,13 +261,49 @@ pointer call_lambda(Lambda l, pointer arglist) {
     argsymbols = cdr(argsymbols);
   }
   // evaluate forms in new environment, return last or nil
-  pointer result = new_nil();
-  pointer body = l->body;
-  while(is_pair(body)) {
-    result = evaluate(car(body), env);
-    body = cdr(body);
+  return evaluate_block(l->body, env);
+}
+
+/* Let */
+
+/**
+ * (a 10 b 20 c 30) -> ((a b c) (10 20 30))
+ */
+pointer let_split(pointer defs) {
+  int c = count(defs);
+  assert(c % 2 == 0);
+  pointer lh = NIL;
+  pointer rh = NIL;
+  while(is_pair(defs)) {
+    lh = new_pair(car(defs), lh);
+    defs = cdr(defs);
+    rh = new_pair(car(defs), rh);
+    defs = cdr(defs);
   }
-  return result;
+  return new_pair(lh, new_pair(rh, NIL));
+}
+
+pointer evaluate_let(pointer both, pointer env, int star) {
+  pointer defs = car(both);
+  pointer body = cdr(both);
+  int c = count(defs);
+  assert(c % 2 == 0);
+  pointer new_env = env;
+  pointer lh, rh;
+
+  while(is_pair(defs)) {
+    lh = car(defs);
+    assert(is_symbol(lh));
+    defs = cdr(defs);
+    if(star) {
+      rh = evaluate(car(defs), new_env);
+    } else {
+      rh = evaluate(car(defs), env);
+    }
+    defs = cdr(defs);
+    new_env = add_env(new_env, lh, rh);
+  }
+  return evaluate_block(body, new_env);
 }
 
 /* Equality */
@@ -373,6 +420,9 @@ pointer BOOLEAN_FALSE;
 pointer SYMBOL_LAMBDA;
 pointer SYMBOL_DEF;
 pointer SYMBOL_SYS;
+pointer SYMBOL_LET;
+pointer SYMBOL_LET_STAR;
+pointer SYMBOL_LETREC;
 
 void init_globals() {
   NIL = GC_MALLOC(sizeof(int));
@@ -386,6 +436,9 @@ void init_globals() {
   SYMBOL_LAMBDA = new_symbol("lambda");
   SYMBOL_DEF = new_symbol("def");
   SYMBOL_SYS = new_symbol("sys");
+  SYMBOL_LET = new_symbol("let");
+  SYMBOL_LET_STAR = new_symbol("let*");
+  SYMBOL_LETREC = new_symbol("letrec");
 }
 
 pointer evaluate_list(pointer args, pointer env) {
@@ -450,6 +503,14 @@ pointer evaluate_pair(pointer form, pointer env) {
   if(is_symbol_equal(first, SYMBOL_SYS)) {
     print_thing(env);printf("\n");
     return new_nil();
+  }
+  /* LET */
+  if(is_symbol_equal(first, SYMBOL_LET)) {
+    return evaluate_let(cdr(form), env, 0);
+  }
+  /* LET* */
+  if(is_symbol_equal(first, SYMBOL_LET_STAR)) {
+    return evaluate_let(cdr(form), env, 1);
   }
   pointer first_eval = evaluate(car(form), env);
   /* WRAPPED C FUNCTION */
@@ -955,23 +1016,25 @@ void init_gc() {
 
 /* the rest */
 
-int main() {
+void load_file(char * filename, pointer env) {
+  GFile * gf = g_file_new_for_path(filename);
+  char * file_contents;
+  gsize file_length;
+  gboolean success = g_file_load_contents(gf, 0, &file_contents, &file_length, 0, 0);
+  if(success) {
+    pointer forms = read_from_string(file_contents);
+    while(is_pair(forms)) {
+      evaluate(car(forms), env);
+      forms = cdr(forms);
+    }
+  } else {
+    printf("unable to load %s\n", filename);
+  }
+}
 
-  init_gc();
-  init_symbols();
-  init_globals();
-  test_is_equal();
-  test_env();
-  test_func();
-  test_evaluate();
-  test_vector();
-  printf("Test, success!\n");
-  printf("\nType exit to exit.\n");
-
+void do_repl(pointer env) {
   const char * prompt = ">>> ";
-
-  pointer env = build_core_env();
-
+  printf("\nType exit to exit.\n");
   while(1) {
     const char * in;
     in = readline(prompt);
@@ -989,6 +1052,33 @@ int main() {
   }
 
   printf("Goodbye.\n");
+}
+
+int main(int argc, char * argv[]) {
+  init_gc();
+  g_type_init();
+  init_symbols();
+  init_globals();
+  test_is_equal();
+  test_env();
+  test_func();
+  test_evaluate();
+  test_vector();
+
+  pointer env = build_core_env();
+
+  if(argc > 2) {
+    char * one = argv[1];
+    char * two = argv[2];
+    if(strcmp(one, "--load")==0) {
+      load_file(two, env);
+      do_repl(env);
+    } else if(strcmp(one, "--script")==0) {
+      load_file(two, env);
+    }
+  } else {
+    do_repl(env);
+  }
 
   return 0;
 }
