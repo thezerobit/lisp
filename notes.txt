@@ -1,0 +1,53 @@
+* convert let to lambda
+
+(let (a 1 b 2 c 3) (print "hello") (+ a b c))
+->
+((lambda (a b c) (print "hello") (+ a b c)) (1 2 3))
+
+could be done with macros in lisp, need to write defmacro first
+
+
+* tail recursion
+
+need def first to even have recursive capabilities
+rename evaluate -> evaluate_internal
+create evaluate trampoline
+... will that work?
+
+
+Create DEF first... stacked scopes?
+
+
+* scope with hash
+
+current:
+((a 100) (b 50) (c 25))
+
+stack it!
+(
+  ((a 100) (b 50) (c 25))
+  <#dynamic hash>
+)
+
+add_env(*, 'g, 200)  ;
+->
+(
+  ((g 200) (a 100) (b 50) (c 25))
+  <#dynamic hash>
+)
+
+maybe...
+add_scope(*, ()) ;
+->
+(
+  ()
+  <#dynamic hash>
+  ((g 200) (a 100) (b 50) (c 25))
+  <#dynamic hash>
+)
+
+
+
+
+
+

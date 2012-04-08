@@ -379,6 +379,7 @@ void test_is_equal() {
 
 /* evaluate */
 
+
 pointer SYMBOL_QUOTE;
 pointer SYMBOL_IF;
 pointer SYMBOL_TRUE;
@@ -386,6 +387,7 @@ pointer SYMBOL_FALSE;
 pointer BOOLEAN_TRUE;
 pointer BOOLEAN_FALSE;
 pointer SYMBOL_LAMBDA;
+pointer SYMBOL_DEF;
 
 void init_globals() {
   SYMBOL_QUOTE = new_symbol("quote");
@@ -395,6 +397,7 @@ void init_globals() {
   BOOLEAN_TRUE = new_boolean(1);
   BOOLEAN_FALSE = new_boolean(0);
   SYMBOL_LAMBDA = new_symbol("lambda");
+  SYMBOL_DEF = new_symbol("def");
 }
 
 pointer evaluate_list(pointer args, pointer env) {
@@ -439,7 +442,7 @@ pointer evaluate(pointer form, pointer env) {
   } else { /* pair */
     pointer first = car(form);
     /* IF */
-    if(is_equal(first, SYMBOL_IF)) {
+    if(is_symbol_equal(first, SYMBOL_IF)) {
       int length = count(cdr(form));
       assert(length == 2 || length == 3);
       pointer second = evaluate(car(cdr(form)), env);
@@ -454,13 +457,25 @@ pointer evaluate(pointer form, pointer env) {
       }
     }
     /* QUOTE */
-    if(is_equal(first, SYMBOL_QUOTE)) {
+    if(is_symbol_equal(first, SYMBOL_QUOTE)) {
       return car(cdr(form)); // unevaluated
     }
     /* LAMBDA */
-    if(is_equal(first, SYMBOL_LAMBDA)) {
+    if(is_symbol_equal(first, SYMBOL_LAMBDA)) {
       pointer rest = cdr(form);
       return new_lambda(car(rest), cdr(rest), env); // unevaluated
+    }
+    /* DEF */
+    if(is_symbol_equal(first, SYMBOL_DEF)) {
+      pointer def_name = car(cdr(form));
+      assert(is_symbol(def_name));
+      pointer def_form = evaluate(car(cdr(cdr(form))), env);
+      /* printf("Setting '"); print_thing(def_name); printf("' to '"); */
+      /* print_thing(def_form);printf("'\n"); */
+      /* print_thing(env);printf("\n"); */
+      def_env(env, def_name, def_form);
+      /* print_thing(env);printf("\n"); */
+      return def_form;
     }
     pointer first_eval = evaluate(car(form), env);
     /* WRAPPED C FUNCTION */
@@ -746,7 +761,7 @@ void print_thing(pointer p) {
         printf("%" PRId64, get_int(p));
         break;
       case TYPE_FUNC:
-        printf("<foreign function>", get_string(p));
+        printf("<foreign function>");
         break;
       case TYPE_STRING:
         printf("\"%s\"", get_string(p));
@@ -768,6 +783,9 @@ void print_thing(pointer p) {
         } else {
           printf("false");
         }
+        break;
+      case TYPE_MUTABLE_HASH:
+        print_mutable_hash(p);
         break;
       default:
         printf("<unknown object>");
@@ -907,29 +925,41 @@ pointer ff_neq(pointer args) {
 
 pointer build_core_env() {
   pointer env = make_env();
-  env = add_env(env, SYMBOL_TRUE, BOOLEAN_TRUE);
-  env = add_env(env, SYMBOL_FALSE, BOOLEAN_FALSE);
-  env = add_env(env, new_symbol("print"), new_func(ff_print));
-  env = add_env(env, new_symbol("println"), new_func(ff_println));
-  env = add_env(env, new_symbol("+"), new_func(ff_plus));
-  env = add_env(env, new_symbol("-"), new_func(ff_minus));
-  env = add_env(env, new_symbol("*"), new_func(ff_mult));
-  env = add_env(env, new_symbol("/"), new_func(ff_div));
-  env = add_env(env, new_symbol(">"), new_func(ff_gt));
-  env = add_env(env, new_symbol("<"), new_func(ff_lt));
-  env = add_env(env, new_symbol(">="), new_func(ff_gte));
-  env = add_env(env, new_symbol("<="), new_func(ff_lte));
-  env = add_env(env, new_symbol("="), new_func(ff_eq));
-  env = add_env(env, new_symbol("!="), new_func(ff_neq));
-  env = add_env(env, new_symbol("vector"), new_func(new_vector_from_list));
-  env = add_env(env, new_symbol("vector-ref"), new_func(ff_vector_ref));
+  def_env(env, SYMBOL_TRUE, BOOLEAN_TRUE);
+  def_env(env, SYMBOL_FALSE, BOOLEAN_FALSE);
+  def_env(env, new_symbol("print"), new_func(ff_print));
+  def_env(env, new_symbol("println"), new_func(ff_println));
+  def_env(env, new_symbol("+"), new_func(ff_plus));
+  def_env(env, new_symbol("-"), new_func(ff_minus));
+  def_env(env, new_symbol("*"), new_func(ff_mult));
+  def_env(env, new_symbol("/"), new_func(ff_div));
+  def_env(env, new_symbol(">"), new_func(ff_gt));
+  def_env(env, new_symbol("<"), new_func(ff_lt));
+  def_env(env, new_symbol(">="), new_func(ff_gte));
+  def_env(env, new_symbol("<="), new_func(ff_lte));
+  def_env(env, new_symbol("="), new_func(ff_eq));
+  def_env(env, new_symbol("!="), new_func(ff_neq));
+  def_env(env, new_symbol("vector"), new_func(new_vector_from_list));
+  def_env(env, new_symbol("vector-ref"), new_func(ff_vector_ref));
   return env;
+}
+
+/* system */
+
+void init_gc() {
+  /*
+   * Supposedly, this will cause GLIB to do memory allocations
+   * in a way that is amenable to Boehm and similar GC's
+   */
+  putenv("G_SLICE=always-malloc");
+  putenv("G_DEBUG=gc-friendly");
 }
 
 /* the rest */
 
 int main() {
 
+  init_gc();
   init_symbols();
   init_globals();
   test_is_equal();
@@ -942,14 +972,14 @@ int main() {
 
   const char * prompt = ">>> ";
 
+  pointer env = build_core_env();
+
   while(1) {
     const char * in;
     in = readline(prompt);
     if(strcmp(in, "exit") == 0) {
       break;
     }
-    /* printf("You typed: %s\n", in); */
-    pointer env = build_core_env();
 
     pointer forms = read_from_string(in);
     pointer val;

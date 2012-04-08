@@ -28,6 +28,7 @@ Things That Are Done
   * numerical comparison, gt, lt, gte, lte
   * = and != comparison for all types
   * lambda
+  * def : mutable top-level scope
 
 * built-in functions
   * print and println
@@ -48,7 +49,7 @@ TODO
   * literal syntax
 * macros
 * local bindings (LET)
-* top level bindings (DEF, DEFUN)
+* defn / defun
 * keywords
 * compilation
 

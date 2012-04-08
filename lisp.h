@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <inttypes.h>
+#include <glib.h>
 
 #define TYPE_MASK    (0b011)
 
@@ -17,8 +18,11 @@
 #define TYPE_VECTOR  7
 #define TYPE_BOOLEAN 8
 #define TYPE_LAMBDA  9
+#define TYPE_MUTABLE_HASH 10
 
 typedef void * pointer;
+
+typedef GHashTable * MutableHash;
 
 /* nil */
 
@@ -51,6 +55,7 @@ typedef struct {
     int64_t int_num;
     pointer (*ffunc)(pointer);
     const char * str;
+    MutableHash mut_hash;
   };
 } other;
 
@@ -177,5 +182,9 @@ pointer ff_neq(pointer args);
 /* core env */
 
 pointer build_core_env();
+
+/* system */
+
+void init_gc();
 
 #endif /* LISP_H */
