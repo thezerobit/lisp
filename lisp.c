@@ -35,11 +35,11 @@ Pair get_pair(pointer p) {
 pointer new_pair(pointer car, pointer cdr) {
   assert(car);
   assert(cdr);
-  pointer p = GC_MALLOC(sizeof(pair));
-  Pair cell = get_pair(p);
+  Pair cell = (Pair)GC_MALLOC(sizeof(pair));
+  cell->type = TYPE_PAIR;
   cell->car = car;
   cell->cdr = cdr;
-  return p;
+  return (pointer)cell;
 }
 
 pointer car(pointer p) {
@@ -84,7 +84,7 @@ int is_other(pointer p) {
 }
 
 Other get_other(pointer p) {
-  return (Other)((uint64_t)p & ~(uint64_t)TYPE_MASK);
+  return (Other)p;
 }
 
 /* Int */
@@ -125,10 +125,8 @@ pointer call_func(pointer f, pointer arglist) {
 }
 
 void test_func() {
-  pointer print = new_func(ff_print);
-  printf("Should print (): ");
-  call_func(print, new_pair(new_nil(), new_nil()));
-  printf("\n");
+  pointer print = new_func(ff_plus);
+  assert(is_equal(new_int(10), call_func(print, new_pair(new_int(10), new_nil()))));
 }
 
 /* String */
@@ -157,7 +155,7 @@ int is_vector(pointer p) {
 
 Vector get_vector(pointer p) {
   assert(is_vector(p));
-  return (Vector)((uint64_t)p & ~(uint64_t)TYPE_MASK);
+  return (Vector)p;
 }
 
 Vector alloc_vector(int size) {
@@ -198,8 +196,6 @@ void test_vector() {
   pointer list_of_numbers = read_first("(1 2 3 4 5 6)");
   pointer v = new_vector_from_list(list_of_numbers);
   assert(is_equal(new_int(1), vector_get(v, new_int(0))));
-  print_thing(v);
-  printf("\n");
 }
 
 /* Boolean */
@@ -380,7 +376,7 @@ pointer SYMBOL_SYS;
 
 void init_globals() {
   NIL = GC_MALLOC(sizeof(int));
-  get_other(NIL)->type = TYPE_NIL;
+  ((Other)NIL)->type = TYPE_NIL;
   SYMBOL_QUOTE = new_symbol("quote");
   SYMBOL_IF = new_symbol("if");
   SYMBOL_TRUE = new_symbol("true");
@@ -464,10 +460,10 @@ pointer evaluate_pair(pointer form, pointer env) {
     return call_lambda(get_lambda(first_eval), evaluate_list(cdr(form), env));
   }
   /* TODO: macros */
-  printf("first: "); print_thing(first); printf("\n");
-  printf("first_eval: "); print_thing(first_eval); printf("\n");
-  printf("What is this?: "); print_thing(form); printf("\n");
-    print_thing(env);printf("\n");
+  /* printf("first: "); print_thing(first); printf("\n"); */
+  /* printf("first_eval: "); print_thing(first_eval); printf("\n"); */
+  /* printf("What is this?: "); print_thing(form); printf("\n"); */
+  /*   print_thing(env);printf("\n"); */
   assert(0);
   return form;
 }
@@ -488,10 +484,6 @@ pointer evaluate(pointer form, pointer env) {
 
 void test_evaluate() {
   pointer env = build_core_env();
-  pointer forms = read_from_string("(print 100)");
-  printf("Should print 100: ");
-  evaluate(car(forms), env);
-  printf("\n");
 
   assert(is_equal(new_symbol("hello"), evaluate(read_first("(quote hello)"), env)));
   assert(is_equal(new_int(100), evaluate(read_first("(if () 200 100)"), env)));

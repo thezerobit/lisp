@@ -33,7 +33,7 @@ pointer new_mutable_hash() {
   o->mut_hash = g_hash_table_new(object_hash, object_compare);
   // tell Glib to free the hash table when this object gets collected
   /* GC_REGISTER_FINALIZER(o->mut_hash, mutable_hash_finalize, 0, 0, 0); */
-  return (pointer)((uint64_t)o | TYPE_OTHER);
+  return (pointer)o;
 }
 
 MutableHash get_mutable_hash(pointer p) {
