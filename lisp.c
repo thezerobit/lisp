@@ -19,10 +19,6 @@ int is_nil (pointer p) {
   return p == NIL;
 }
 
-pointer new_nil() {
-  return NIL;
-}
-
 /* Pair */
 
 int is_pair(pointer p) {
@@ -62,7 +58,7 @@ pointer set_car(pointer p, pointer val) {
 }
 
 pointer reverse(pointer p) {
-  pointer last = new_nil();
+  pointer last = NIL;
   while(!is_nil(p)) {
     pointer next = new_pair(car(p), last);
     p = cdr(p);
@@ -135,7 +131,7 @@ pointer call_func(pointer f, pointer arglist) {
 
 void test_func() {
   pointer print = new_func(ff_plus);
-  assert(is_equal(new_int(10), call_func(print, new_pair(new_int(10), new_nil()))));
+  assert(is_equal(new_int(10), call_func(print, new_pair(new_int(10), NIL))));
 }
 
 /* String */
@@ -378,13 +374,13 @@ void test_is_equal() {
   pointer s1 = new_symbol("foo");
   pointer s2 = new_symbol("bar");
   pointer s3 = new_symbol("foo");
-  pointer n1 = new_nil();
-  pointer n2 = new_nil();
-  pointer p1 = new_pair(new_int(1), new_nil());
-  pointer p2 = new_pair(new_int(1), new_nil());
-  pointer p3 = new_pair(new_int(1), new_pair(new_int(2), new_nil()));
-  pointer p4 = new_pair(new_int(1), new_pair(new_int(2), new_nil()));
-  pointer p5 = new_pair(new_int(1), new_pair(new_int(3), new_nil()));
+  pointer n1 = NIL;
+  pointer n2 = NIL;
+  pointer p1 = new_pair(new_int(1), NIL);
+  pointer p2 = new_pair(new_int(1), NIL);
+  pointer p3 = new_pair(new_int(1), new_pair(new_int(2), NIL));
+  pointer p4 = new_pair(new_int(1), new_pair(new_int(2), NIL));
+  pointer p5 = new_pair(new_int(1), new_pair(new_int(3), NIL));
 
   pointer str1 = new_string("hi");
   pointer str2 = new_string("hello");
@@ -444,7 +440,7 @@ pointer evaluate_list(pointer args, pointer env) {
   if(is_pair(args)) {
     return new_pair(evaluate(car(args), env), evaluate_list(cdr(args), env));
   } else {
-    return new_nil();
+    return NIL;
   }
 }
 
@@ -475,7 +471,7 @@ pointer evaluate_pair(pointer form, pointer env) {
       if(length > 2) {
         return evaluate(car(cdr(cdr(cdr(form)))), env);
       } else {
-        return new_nil();
+        return NIL;
       }
     } else {
       return evaluate(car(cdr(cdr(form))), env);
@@ -501,7 +497,7 @@ pointer evaluate_pair(pointer form, pointer env) {
   /* SYS */
   if(is_symbol_equal(first, SYMBOL_SYS)) {
     print_thing(env);printf("\n");
-    return new_nil();
+    return NIL;
   }
   /* LET */
   if(is_symbol_equal(first, SYMBOL_LET)) {
@@ -556,7 +552,7 @@ void test_evaluate() {
   assert(is_equal(new_symbol("hello"), evaluate(read_first("(quote hello)"), env)));
   assert(is_equal(new_int(100), evaluate(read_first("(if () 200 100)"), env)));
   assert(is_equal(new_int(200), evaluate(read_first("(if 1 200 100)"), env)));
-  assert(is_equal(new_nil(), evaluate(read_first("(if () 200)"), env)));
+  assert(is_equal(NIL, evaluate(read_first("(if () 200)"), env)));
   assert(is_equal(new_int(42), evaluate(read_first("(+ 2 40)"), env)));
   assert(is_equal(new_int(4200), evaluate(read_first("(* 100 (+ 2 40))"), env)));
   assert(is_equal(new_int(10), evaluate(read_first("(/ 100 (+ 5 5))"), env)));
@@ -747,7 +743,7 @@ pointer read_next(read_pointer * rp) {
 
 pointer read_pair(read_pointer * rp) {
   read_required(rp, '(');
-  pointer last_pair = new_nil();
+  pointer last_pair = NIL;
   pointer next_item;
   /* build a reverse list of elements read */
   while(next_item = read_next(rp)) {
@@ -761,7 +757,7 @@ pointer read_pair(read_pointer * rp) {
 
 pointer read_vec(read_pointer * rp) {
   read_required(rp, '[');
-  pointer last_pair = new_nil();
+  pointer last_pair = NIL;
   pointer next_item;
   /* build a reverse list of elements read */
   while(next_item = read_next(rp)) {
@@ -780,7 +776,7 @@ pointer read_vec(read_pointer * rp) {
 pointer read_from_string(const char * input) {
   read_pointer r = {.loc = input, .line = 1, .col = 1};
   read_pointer * rp = &r;
-  pointer last_pair = new_nil();
+  pointer last_pair = NIL;
   pointer next_item;
   /* build a reverse list of elements read */
   while(1) {
@@ -869,7 +865,7 @@ pointer ff_print(pointer args) {
       break;
     }
   }
-  return new_nil();
+  return NIL;
 }
 
 pointer ff_println(pointer args) {

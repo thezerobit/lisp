@@ -6,17 +6,17 @@
 
 pointer make_env() {
   return new_pair(
-      new_nil(),
+      NIL,
       new_pair(
         new_mutable_hash(),
-        new_nil()));
+        NIL));
 }
 
 pointer add_env(pointer env, pointer sym, pointer value) {
   /* printf("A: "); print_thing(env); printf("\n"); */
   pointer current_scope = car(env);
   pointer rest = cdr(env);
-  pointer map = new_pair(sym, new_pair(value, new_nil()));
+  pointer map = new_pair(sym, new_pair(value, NIL));
   /* printf("map: "); print_thing(map); printf("\n"); */
   pointer new_current_scope = new_pair(map, current_scope);
   /* printf("new_current_scope: "); print_thing(new_current_scope); printf("\n"); */
