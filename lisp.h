@@ -76,7 +76,6 @@ typedef struct {
 
 typedef other * Other;
 
-int is_other(pointer p);
 Other get_other(pointer p);
 
 /* Int */

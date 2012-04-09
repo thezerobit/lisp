@@ -85,10 +85,6 @@ int count(pointer p) {
 
 /* Other */
 
-int is_other(pointer p) {
-  return get_other(p)->type >= TYPE_OTHER;
-}
-
 Other get_other(pointer p) {
   return (Other)p;
 }

@@ -24,7 +24,7 @@ gboolean object_compare(gconstpointer v1, gconstpointer v2) {
 /* } */
 
 int is_mutable_hash(pointer p) {
-  return is_other(p) && get_other(p)->type == TYPE_MUTABLE_HASH;
+  return get_other(p)->type == TYPE_MUTABLE_HASH;
 }
 
 pointer new_mutable_hash() {
