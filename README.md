@@ -40,6 +40,7 @@ Things That Are Done
 TODO
 ----
 
+* split stuff into separate files...
 * single 'quote syntax sugar
 * begin / do / progn
 * vector goodies

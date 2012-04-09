@@ -963,6 +963,18 @@ pointer ff_gte(pointer args) {
   return not(ff_lt(args));
 }
 
+pointer ff_list(pointer args) {
+  return args;
+}
+
+pointer ff_car(pointer args) {
+  return car(car(args));
+}
+
+pointer ff_cdr(pointer args) {
+  return cdr(car(args));
+}
+
 /**
  * Equality for any types. All arguments have to be equal to be true.
  */
@@ -989,8 +1001,10 @@ pointer build_core_env() {
   pointer env = make_env();
   def_env(env, SYMBOL_TRUE, BOOLEAN_TRUE);
   def_env(env, SYMBOL_FALSE, BOOLEAN_FALSE);
+  /* print */
   def_env(env, new_symbol("print"), new_func(ff_print));
   def_env(env, new_symbol("println"), new_func(ff_println));
+  /* math */
   def_env(env, new_symbol("+"), new_func(ff_plus));
   def_env(env, new_symbol("-"), new_func(ff_minus));
   def_env(env, new_symbol("*"), new_func(ff_mult));
@@ -1001,8 +1015,18 @@ pointer build_core_env() {
   def_env(env, new_symbol("<="), new_func(ff_lte));
   def_env(env, new_symbol("="), new_func(ff_eq));
   def_env(env, new_symbol("!="), new_func(ff_neq));
+  /* list processing */
+  def_env(env, new_symbol("list"), new_func(ff_list));
+  pointer car_func = new_func(ff_car);
+  pointer cdr_func = new_func(ff_cdr);
+  def_env(env, new_symbol("car"), car_func);
+  def_env(env, new_symbol("first"), car_func);
+  def_env(env, new_symbol("cdr"), cdr_func);
+  def_env(env, new_symbol("rest"), cdr_func);
+  /* vector */
   def_env(env, new_symbol("vector"), new_func(new_vector_from_list));
   def_env(env, new_symbol("vector-ref"), new_func(ff_vector_ref));
+  /* other */
   def_env(env, new_symbol("fib"),
       evaluate(read_first("(lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))"), env));
   return env;
