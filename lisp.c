@@ -520,6 +520,8 @@ void test_evaluate() {
   assert(is_equal(new_int(20), e("(let (a 10) (let* (a 20 b a) b))", env)));
   assert(is_equal(new_int(20), e("(let (a 10) (letrec (a 20 b a) b))", env)));
   assert(is_equal(new_int(20), e("(letrec (a (lambda () b) b 20) (a))", env)));
+  assert(is_equal(e("(list 1 2 3)", env), e("(vector->list [1 2 3])", env)));
+  assert(is_equal(e("(vector 1 2 3)", env), e("(list->vector (list 1 2 3))", env)));
 }
 
 /* read */
@@ -968,6 +970,8 @@ pointer build_core_env() {
   /* vector */
   def_env(env, new_symbol("vector"), new_func(new_vector_from_list));
   def_env(env, new_symbol("vector-ref"), new_func(ff_vector_ref));
+  def_env(env, new_symbol("list->vector"), new_func(ff_list_to_vector));
+  def_env(env, new_symbol("vector->list"), new_func(ff_vector_to_list));
   /* other */
   def_env(env, new_symbol("fib"),
       evaluate(read_first("(lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))"), env));

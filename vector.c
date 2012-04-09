@@ -48,6 +48,20 @@ pointer ff_vector_ref(pointer l) {
   return vector_get(v, rest);
 }
 
+pointer ff_list_to_vector(pointer l) {
+  return new_vector_from_list(car(l));
+}
+
+pointer ff_vector_to_list(pointer l) {
+  Vector vec = get_vector(car(l));
+  pointer new_list = NIL;
+  int i;
+  for(i = vec->count - 1; i >= 0; -- i) {
+    new_list = new_pair(vec->elems[i], new_list);
+  }
+  return new_list;
+}
+
 void test_vector() {
   pointer list_of_numbers = read_first("(1 2 3 4 5 6)");
   pointer v = new_vector_from_list(list_of_numbers);

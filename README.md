@@ -34,6 +34,8 @@ Things That Are Done
 * built-in functions
   * print and println
   * integer math: + - \* /
+  * list: list, first/car, rest/cdr
+  * vector: vector, vector->list, list->vector
 
 * rudimentary REPL
 
@@ -43,9 +45,6 @@ TODO
 * split stuff into separate files...
 * single 'quote syntax sugar
 * begin / do / progn
-* vector goodies
-  * vector->list
-  * list->vector
 * map, set
   * language support
   * literal syntax
