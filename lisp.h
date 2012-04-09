@@ -98,24 +98,6 @@ int is_string(pointer p);
 pointer new_string(const char * s);
 const char * get_string(pointer p);
 
-/* Vector */
-
-typedef struct {
-  int type;
-  int count;
-  pointer * elems;
-} vector;
-
-typedef vector * Vector;
-
-int is_vector(pointer p);
-Vector get_vector(pointer p);
-Vector alloc_vector(int size);
-pointer new_vector_from_list(pointer list);
-pointer vector_get(pointer v, pointer offset);
-pointer ff_vector_ref(pointer l);
-void test_vector();
-
 /* Boolean */
 
 int is_boolean(pointer p);
