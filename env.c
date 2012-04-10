@@ -66,11 +66,13 @@ pointer lookup_env(pointer env, pointer sym) {
   pointer scope = car(env);
   pointer found = lookup_scope(scope, sym);
   if(found != NULL) {
+    /* printf(" found "); print_thing(found); printf("\n"); */
     return found;
   }
   pointer hash = car(cdr(env));
   found = mutable_hash_get(hash, sym);
   if(found != NULL) {
+    /* printf(" found "); print_thing(found); printf("\n"); */
     return found;
   }
   printf("symbol not found: %s\n", get_symbol(sym)->name);

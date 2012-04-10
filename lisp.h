@@ -60,6 +60,8 @@ pointer cdr(pointer p);
 pointer set_car(pointer p, pointer val);
 pointer reverse(pointer p);
 int count(pointer p);
+pointer ff_map(pointer p);
+pointer ff_cons(pointer p);
 
 /* Other */
 

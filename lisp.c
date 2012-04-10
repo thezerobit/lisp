@@ -83,6 +83,14 @@ int count(pointer p) {
   return length;
 }
 
+pointer ff_cons(pointer p) {
+  return new_pair(car(p), car(cdr(p)));
+}
+
+pointer ff_map(pointer p) {
+  return NIL;
+}
+
 /* Other */
 
 Other get_other(pointer p) {
@@ -469,7 +477,6 @@ pointer evaluate_pair(pointer form, pointer env) {
   /* printf("first: "); print_thing(first); printf("\n"); */
   /* printf("first_eval: "); print_thing(first_eval); printf("\n"); */
   /* printf("What is this?: "); print_thing(form); printf("\n"); */
-  /*   print_thing(env);printf("\n"); */
   assert(0);
   return form;
 }
@@ -795,7 +802,7 @@ void print_thing(pointer p) {
       print_mutable_hash(p);
       break;
     default:
-      printf("<unknown object>");
+      printf("<unknown object %d>", get_other(p)->type);
       break;
   }
 }
@@ -967,6 +974,7 @@ pointer build_core_env() {
   def_env(env, new_symbol("first"), car_func);
   def_env(env, new_symbol("cdr"), cdr_func);
   def_env(env, new_symbol("rest"), cdr_func);
+  def_env(env, new_symbol("cons"), new_func(ff_cons));
   /* vector */
   def_env(env, new_symbol("vector"), new_func(new_vector_from_list));
   def_env(env, new_symbol("vector-ref"), new_func(ff_vector_ref));

@@ -42,6 +42,8 @@ Things That Are Done
 TODO
 ----
 
+* NIL, SYMBOL\_\*, etc should be constant
+  * replace get\_other(p)->type with get\_type(p)
 * split stuff into separate files...
 * single 'quote syntax sugar
 * begin / do / progn
