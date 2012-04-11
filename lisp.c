@@ -197,6 +197,7 @@ Lambda get_lambda(pointer p) {
 
 pointer evaluate_block(pointer body, pointer env) {
   pointer result = NIL;
+  int is_tail = 0;
   while(is_pair(body)) {
     result = evaluate(car(body), env);
     body = cdr(body);
@@ -206,6 +207,7 @@ pointer evaluate_block(pointer body, pointer env) {
 
 pointer call_lambda(Lambda l, pointer arglist) {
   // build env from arglist
+lambda_start:
   assert(count(arglist) == count(l->arglist));
   pointer env = l->env;
   pointer args = arglist;
@@ -218,8 +220,43 @@ pointer call_lambda(Lambda l, pointer arglist) {
     argsymbols = cdr(argsymbols);
   }
   // evaluate forms in new environment, return last or nil
-  return evaluate_block(l->body, env);
+  /* return evaluate_block(l->body, env); */
+  pointer body = l->body;
+  pointer result = NIL;
+  int is_tail = 0;
+  while(is_pair(body)) {
+    is_tail = !is_pair(cdr(body));
+    result = evaluate_inner(car(body), env, is_tail);
+    body = cdr(body);
+  }
+  if(is_boink(result)) {
+    Boink b = get_boink(result);
+    l = b->l;
+    arglist = b->args;
+    goto lambda_start;
+  }
+  return result;
 }
+
+/* Boink */
+
+int is_boink(pointer p) {
+  return get_other(p)->type == TYPE_BOINK;
+}
+
+pointer new_boink(Lambda l, pointer args) {
+  Boink b = (Boink)GC_MALLOC(sizeof(boink));
+  b->type = TYPE_BOINK;
+  b->l = l;
+  b->args = args;
+  return (pointer)b;
+}
+
+Boink get_boink(pointer p) {
+  assert(is_boink(p));
+  return (Boink)p;
+}
+
 
 /* Let */
 
@@ -414,7 +451,7 @@ pointer read_first(const char * input) {
   return car(l);
 }
 
-pointer evaluate_pair(pointer form, pointer env) {
+pointer evaluate_pair(pointer form, pointer env, int is_tail) {
   pointer first = car(form);
   /* IF */
   if(is_symbol_equal(first, SYMBOL_IF)) {
@@ -423,12 +460,12 @@ pointer evaluate_pair(pointer form, pointer env) {
     pointer second = evaluate(car(cdr(form)), env);
     if(is_nil(second) || second == BOOLEAN_FALSE) {
       if(length > 2) {
-        return evaluate(car(cdr(cdr(cdr(form)))), env);
+        return evaluate_inner(car(cdr(cdr(cdr(form)))), env, is_tail);
       } else {
         return NIL;
       }
     } else {
-      return evaluate(car(cdr(cdr(form))), env);
+      return evaluate_inner(car(cdr(cdr(form))), env, is_tail);
     }
   }
   /* QUOTE */
@@ -471,7 +508,14 @@ pointer evaluate_pair(pointer form, pointer env) {
     return call_func(first_eval, evaluate_list(cdr(form), env));
   }
   if(is_lambda(first_eval)) {
-    return call_lambda(get_lambda(first_eval), evaluate_list(cdr(form), env));
+    Lambda lam = get_lambda(first_eval);
+    pointer args = evaluate_list(cdr(form), env);
+    if(is_tail) {
+      // TODO: return boink to be captured in call_lambda for tail recursion
+      return new_boink(lam, args);
+    } else {
+      return call_lambda(lam, args);
+    }
   }
   /* TODO: macros */
   /* printf("first: "); print_thing(first); printf("\n"); */
@@ -482,10 +526,14 @@ pointer evaluate_pair(pointer form, pointer env) {
 }
 
 pointer evaluate(pointer form, pointer env) {
+  return evaluate_inner(form, env, 0);
+}
+
+pointer evaluate_inner(pointer form, pointer env, int is_tail) {
   Other o = get_other(form);
   switch(o->type) {
     case TYPE_PAIR:
-      return evaluate_pair(form, env);
+      return evaluate_pair(form, env, is_tail);
     case TYPE_SYMBOL:
       return lookup_env(env, form);
     case TYPE_VECTOR:
@@ -529,6 +577,10 @@ void test_evaluate() {
   assert(is_equal(new_int(20), e("(letrec (a (lambda () b) b 20) (a))", env)));
   assert(is_equal(e("(list 1 2 3)", env), e("(vector->list [1 2 3])", env)));
   assert(is_equal(e("(vector 1 2 3)", env), e("(list->vector (list 1 2 3))", env)));
+  // It's hard to test tail recursion without a long pause, since the C stack is
+  // pretty resilient. Set the 100 to 1000000 in next line to prove that
+  // it is working.
+  assert(is_equal(new_int(0), e("(letrec (b (lambda (x) (if (<= x 0) x (b (- x 1))))) (b 100))", env)));
 }
 
 /* read */
@@ -983,6 +1035,10 @@ pointer build_core_env() {
   /* other */
   def_env(env, new_symbol("fib"),
       evaluate(read_first("(lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))"), env));
+
+  load_file("core.lisp", env);
+
+
   return env;
 }
 

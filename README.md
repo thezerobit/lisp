@@ -30,6 +30,7 @@ Things That Are Done
   * lambda
   * def : mutable top-level scope
   * let, let\* and letrec
+  * optimized tail recursion
 
 * built-in functions
   * print and println
@@ -42,6 +43,7 @@ Things That Are Done
 TODO
 ----
 
+* comments
 * NIL, SYMBOL\_\*, etc should be constant
   * replace get\_other(p)->type with get\_type(p)
 * split stuff into separate files...

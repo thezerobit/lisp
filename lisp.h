@@ -18,6 +18,7 @@
 #define TYPE_BOOLEAN 8
 #define TYPE_LAMBDA  9
 #define TYPE_MUTABLE_HASH 10
+#define TYPE_BOINK   11
 
 typedef void * pointer;
 
@@ -122,6 +123,20 @@ Lambda get_lambda(pointer p);
 pointer eval_block(pointer body, pointer env);
 pointer call_lambda(Lambda l, pointer arglist);
 
+/* Boink */
+
+typedef struct {
+  int type;
+  Lambda l;
+  pointer args;
+} boink;
+
+typedef boink * Boink;
+
+int is_boink(pointer p);
+pointer new_boink(Lambda l, pointer args);
+Boink get_boink(pointer p);
+
 /* Let */
 pointer let_split(pointer defs);
 pointer evaluate_let(pointer both, pointer env, pointer which);
@@ -137,7 +152,10 @@ void init_globals();
 pointer evaluate_list(pointer args, pointer env);
 pointer evaluate_vector(pointer v, pointer env);
 pointer read_first(const char * input);
+pointer evaluate_pair(pointer form, pointer env, int is_tail);
+pointer eval(pointer form, pointer env);
 pointer evaluate(pointer form, pointer env);
+pointer evaluate_inner(pointer form, pointer env, int is_tail);
 void test_evaluate();
 
 /* read */
