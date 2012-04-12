@@ -6,12 +6,13 @@
 #include <assert.h>
 #include <stdint.h>
 #include <inttypes.h>
-#include "glib.h"
+#include <glib.h>
 #include <gio/gio.h>
 
 #include "lisp.h"
 #include "env.h"
 #include "symbol.h"
+#include "keyword.h"
 #include "vector.h"
 
 /* nil == empty list */
@@ -594,7 +595,7 @@ int is_first_symbol_char(char c) {
   if(is_alpha(c)) {
     return 1;
   }
-  return strchr("+*-!/><=", c) != NULL;
+  return strchr("+*-!/><=?", c) != NULL;
 }
 
 int is_numeric(char c) {
@@ -637,7 +638,10 @@ int read_required(read_pointer * rp, char c) {
   return 0;
 }
 
-pointer read_symbol(read_pointer * rp) {
+pointer read_symbol(read_pointer * rp, int keyword) {
+  if(keyword) {
+    read_required(rp, ':');
+  }
   int length = 0;
   const char * start = rp->loc;
   const char * next = start;
@@ -650,7 +654,14 @@ pointer read_symbol(read_pointer * rp) {
   name[length] = 0;
   rp->loc = next;
   rp->col += length;
+  if(keyword) {
+    return new_keyword(name);
+  }
   return new_symbol(name);
+}
+
+pointer read_keyword(read_pointer * rp) {
+  return read_symbol(rp, 1);
 }
 
 pointer read_number(read_pointer * rp) {
@@ -741,9 +752,11 @@ pointer read_next(read_pointer * rp) {
   } else if(is_numeric(next) || (next == '-' && is_numeric(succ))) {
     return read_number(rp);
   } else if(is_first_symbol_char(next)) {
-    return read_symbol(rp);
+    return read_symbol(rp, 0);
   } else if(next == '"') {
     return read_string(rp);
+  } else if(next == ':') {
+    return read_keyword(rp);
   }
   return NULL;
 }
@@ -822,6 +835,9 @@ void print_thing(pointer p) {
       break;
     case TYPE_SYMBOL:
       printf("%s", get_symbol(p)->name);
+      break;
+    case TYPE_KEYWORD:
+      printf(":%s", get_symbol(p)->name);
       break;
     case TYPE_INT:
       printf("%" PRId64, get_int(p));
@@ -1032,6 +1048,9 @@ pointer build_core_env() {
   def_env(env, new_symbol("vector-ref"), new_func(ff_vector_ref));
   def_env(env, new_symbol("list->vector"), new_func(ff_list_to_vector));
   def_env(env, new_symbol("vector->list"), new_func(ff_vector_to_list));
+  /* predicates */
+  def_env(env, new_symbol("keyword?"), new_func(ff_is_keyword));
+
   /* other */
   def_env(env, new_symbol("fib"),
       evaluate(read_first("(lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))"), env));
@@ -1104,6 +1123,7 @@ int main(int argc, char * argv[]) {
   init_gc();
   g_type_init();
   init_symbols();
+  init_keywords();
   init_globals();
   test_is_equal();
   test_env();

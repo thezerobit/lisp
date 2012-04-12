@@ -30,7 +30,7 @@ Things That Are Done
   * lambda
   * def : mutable top-level scope
   * let, let\* and letrec
-  * optimized tail recursion
+  * TCO (tail call optimization) for lambdas
 
 * built-in functions
   * print and println

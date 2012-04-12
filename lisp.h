@@ -10,7 +10,7 @@
 #define TYPE_PAIR    0
 #define TYPE_NIL     1
 #define TYPE_SYMBOL  2
-#define TYPE_OTHER   3
+#define TYPE_KEYWORD 3
 #define TYPE_INT     4
 #define TYPE_FUNC    5
 #define TYPE_STRING  6
@@ -174,7 +174,8 @@ int is_symbol_char(char c);
 int is_whitespace(char c);
 void skip_whitespace(read_pointer * rp);
 int read_required(read_pointer * rp, char c);
-pointer read_symbol(read_pointer * rp);
+pointer read_symbol(read_pointer * rp, int keyword);
+pointer read_keyword(read_pointer * rp);
 pointer read_number(read_pointer * rp);
 pointer read_string(read_pointer * rp);
 pointer read_next(read_pointer * rp);
@@ -206,5 +207,6 @@ pointer build_core_env();
 /* system */
 
 void init_gc();
+void load_file(char * filename, pointer env);
 
 #endif /* LISP_H */
