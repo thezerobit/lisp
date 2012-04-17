@@ -64,6 +64,6 @@ void print_vals(pointer key, pointer val, pointer extra) {
 }
 
 void print_mutable_hash(pointer p) {
-  printf("<mutable_hash {");
-  g_hash_table_foreach(get_mutable_hash(p), print_vals, NULL);
+  printf("<mutable_hash>");
+  // g_hash_table_foreach(get_mutable_hash(p), print_vals, NULL);
 }

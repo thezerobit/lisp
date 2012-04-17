@@ -9,11 +9,13 @@
 #include <glib.h>
 #include <gio/gio.h>
 
+#include "persistenthashmap.h"
 #include "lisp.h"
 #include "env.h"
 #include "symbol.h"
 #include "keyword.h"
 #include "vector.h"
+#include "hashmap.h"
 
 /* nil == empty list */
 
@@ -409,9 +411,48 @@ void test_is_equal() {
   assert( is_equal(str3, str2));
 }
 
+int hash_thing(pointer p) {
+  int t = get_other(p)->type;
+  int64_t i;
+  switch(t) {
+    case TYPE_PAIR:
+      // TODO: fix
+      return g_direct_hash(p);
+    case TYPE_NIL:
+      return TYPE_NIL;
+    case TYPE_SYMBOL:
+      return g_str_hash(get_symbol(p)->name);
+    case TYPE_KEYWORD:
+      return g_str_hash(get_keyword(p)->name) + 1;
+    case TYPE_INT:
+      i = get_int(p);
+      return (int)(i & 0xFFFF);
+    case TYPE_FUNC:
+      return g_direct_hash(p);
+    case TYPE_STRING:
+      return g_str_hash(get_string(p)) + 2;
+    case TYPE_VECTOR:
+      // TODO: fix
+      return g_direct_hash(p);
+    case TYPE_BOOLEAN:
+      return g_direct_hash(p);
+    case TYPE_LAMBDA:
+      return g_direct_hash(p);
+    case TYPE_MUTABLE_HASH:
+      // TODO: fix
+      return g_direct_hash(p);
+    case TYPE_HASHMAP:
+      // TODO: fix
+      return g_direct_hash(p);
+    default:
+      return g_direct_hash(p);
+  }
+}
+
 /* evaluate */
 
 void init_globals() {
+  init_INodes(is_equal, hash_thing); /* PersistentHashMap init */
   NIL = GC_MALLOC(sizeof(int));
   ((Other)NIL)->type = TYPE_NIL;
   SYMBOL_QUOTE = new_symbol("quote");
@@ -869,6 +910,9 @@ void print_thing(pointer p) {
     case TYPE_MUTABLE_HASH:
       print_mutable_hash(p);
       break;
+    case TYPE_HASHMAP:
+      print_hashmap(p);
+      break;
     default:
       printf("<unknown object %d>", get_other(p)->type);
       break;
@@ -1048,6 +1092,11 @@ pointer build_core_env() {
   def_env(env, new_symbol("vector-ref"), new_func(ff_vector_ref));
   def_env(env, new_symbol("list->vector"), new_func(ff_list_to_vector));
   def_env(env, new_symbol("vector->list"), new_func(ff_vector_to_list));
+  /* hashmap */
+  def_env(env, new_symbol("get"), new_func(ff_hashmap_get));
+  def_env(env, new_symbol("assoc"), new_func(ff_hashmap_assoc));
+  def_env(env, new_symbol("hash-map"), new_func(new_hashmap_from_list));
+  def_env(env, new_symbol("list->hash-map"), new_func(ff_list_to_hashmap));
   /* predicates */
   def_env(env, new_symbol("keyword?"), new_func(ff_is_keyword));
 

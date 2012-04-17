@@ -19,6 +19,7 @@
 #define TYPE_LAMBDA  9
 #define TYPE_MUTABLE_HASH 10
 #define TYPE_BOINK   11
+#define TYPE_HASHMAP 12
 
 typedef void * pointer;
 
@@ -145,6 +146,7 @@ pointer evaluate_let(pointer both, pointer env, pointer which);
 
 int is_equal(pointer p, pointer o);
 void test_is_equal();
+int hash_thing(pointer p);
 
 /* evaluate */
 
