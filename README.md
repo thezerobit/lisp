@@ -19,6 +19,7 @@ Things That Are Done
   * strings
   * vectors and vector literals
   * boolean values: true and false
+  * hash-map literals
 
 * interpreted evaluation (evaluate)
   * lookup symbols
@@ -37,6 +38,7 @@ Things That Are Done
   * integer math: + - \* /
   * list: list, first/car, rest/cdr
   * vector: vector, vector->list, list->vector
+  * hash-map: hash-map, list->hash-map, get, assoc
 
 * rudimentary REPL
 

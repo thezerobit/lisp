@@ -181,8 +181,10 @@ pointer read_keyword(read_pointer * rp);
 pointer read_number(read_pointer * rp);
 pointer read_string(read_pointer * rp);
 pointer read_next(read_pointer * rp);
+pointer read_inside_list(read_pointer * rp);
 pointer read_pair(read_pointer * rp);
 pointer read_vec(read_pointer * rp);
+pointer read_hashmap(read_pointer * rp);
 pointer read_from_string(const char * input);
 
 /* print */

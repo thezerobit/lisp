@@ -790,6 +790,8 @@ pointer read_next(read_pointer * rp) {
     return read_pair(rp);
   } else if(next == '[') {
     return read_vec(rp);
+  } else if(next == '{') {
+    return read_hashmap(rp);
   } else if(is_numeric(next) || (next == '-' && is_numeric(succ))) {
     return read_number(rp);
   } else if(is_first_symbol_char(next)) {
@@ -802,8 +804,7 @@ pointer read_next(read_pointer * rp) {
   return NULL;
 }
 
-pointer read_pair(read_pointer * rp) {
-  read_required(rp, '(');
+pointer read_inside_list(read_pointer * rp) {
   pointer last_pair = NIL;
   pointer next_item;
   /* build a reverse list of elements read */
@@ -812,23 +813,30 @@ pointer read_pair(read_pointer * rp) {
   }
   /* reverse it */
   pointer list = reverse(last_pair);
+  return list;
+}
+
+pointer read_pair(read_pointer * rp) {
+  read_required(rp, '(');
+  pointer list = read_inside_list(rp);
   read_required(rp, ')');
   return list;
 }
 
 pointer read_vec(read_pointer * rp) {
   read_required(rp, '[');
-  pointer last_pair = NIL;
-  pointer next_item;
-  /* build a reverse list of elements read */
-  while(next_item = read_next(rp)) {
-    last_pair = new_pair(next_item, last_pair);
-  }
-  /* reverse it */
-  pointer list = reverse(last_pair);
+  pointer list = read_inside_list(rp);
   pointer v = new_vector_from_list(list);
   read_required(rp, ']');
   return v;
+}
+
+pointer read_hashmap(read_pointer * rp) {
+  read_required(rp, '{');
+  pointer list = read_inside_list(rp);
+  pointer hm = new_hashmap_from_list(list);
+  read_required(rp, '}');
+  return hm;
 }
 
 /**
