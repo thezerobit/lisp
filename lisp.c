@@ -488,6 +488,12 @@ pointer evaluate_vector(pointer v, pointer env) {
   return (pointer)new_vec;
 }
 
+pointer evaluate_hashmap(pointer h, pointer env) {
+  assert(is_hashmap(h));
+  // TODO: evaluate this stuff
+  return h;
+}
+
 pointer read_first(const char * input) {
   pointer l = read_from_string(input);
   return car(l);
@@ -580,6 +586,8 @@ pointer evaluate_inner(pointer form, pointer env, int is_tail) {
       return lookup_env(env, form);
     case TYPE_VECTOR:
       return evaluate_vector(form, env);
+    case TYPE_HASHMAP:
+      return evaluate_hashmap(form, env);
     default:
       return form;
   }
@@ -782,24 +790,30 @@ pointer read_string(read_pointer * rp) {
 pointer read_next(read_pointer * rp) {
   skip_whitespace(rp);
   char next = *(rp->loc);
-  if(next == 0) {
+  switch(next) {
+  case 0:
     return NULL;
+  case '(':
+    return read_pair(rp);
+  case '[':
+    return read_vec(rp);
+  case '{':
+    return read_hashmap(rp);
+  case '"':
+    return read_string(rp);
+  case ':':
+    return read_keyword(rp);
+  case '\'':
+    read_required(rp, '\'');
+    return new_pair(SYMBOL_QUOTE, new_pair(read_next(rp), NIL));
+  default:
+    break;
   }
   char succ = *(rp->loc + 1);
-  if(next == '(') {
-    return read_pair(rp);
-  } else if(next == '[') {
-    return read_vec(rp);
-  } else if(next == '{') {
-    return read_hashmap(rp);
-  } else if(is_numeric(next) || (next == '-' && is_numeric(succ))) {
+  if(is_numeric(next) || (next == '-' && is_numeric(succ))) {
     return read_number(rp);
   } else if(is_first_symbol_char(next)) {
     return read_symbol(rp, 0);
-  } else if(next == '"') {
-    return read_string(rp);
-  } else if(next == ':') {
-    return read_keyword(rp);
   }
   return NULL;
 }

@@ -153,6 +153,7 @@ int hash_thing(pointer p);
 void init_globals();
 pointer evaluate_list(pointer args, pointer env);
 pointer evaluate_vector(pointer v, pointer env);
+pointer evaluate_hashmap(pointer h, pointer env);
 pointer read_first(const char * input);
 pointer evaluate_pair(pointer form, pointer env, int is_tail);
 pointer eval(pointer form, pointer env);

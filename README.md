@@ -19,7 +19,8 @@ Things That Are Done
   * strings
   * vectors and vector literals
   * boolean values: true and false
-  * hash-map literals
+  * hash-map literals (except elements are unevaluated)
+  * single 'quote syntax sugar
 
 * interpreted evaluation (evaluate)
   * lookup symbols
@@ -49,7 +50,6 @@ TODO
 * NIL, SYMBOL\_\*, etc should be constant
   * replace get\_other(p)->type with get\_type(p)
 * split stuff into separate files...
-* single 'quote syntax sugar
 * begin / do / progn
 * map, set
   * language support
