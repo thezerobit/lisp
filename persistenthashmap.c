@@ -53,6 +53,12 @@ void * INode_findDef(void * self, int shift, int hash, void * key,
   return (*cp)->findDef(self, shift, hash, key, notFound);
 }
 
+void INode_foreach(void * self, PHMFunc f, void * data) {
+  const INode * const * cp = self;
+  assert(self && * cp && (*cp)->foreach);
+  (*cp)->foreach(self, f, data);
+}
+
 /* void * INode_nodeSeq(void * self) { */
 /*   const INode * const * cp = self; */
 /*   assert(self && * cp && (*cp)->nodeSeq); */
@@ -64,6 +70,22 @@ void * INode_findDef(void * self, int shift, int hash, void * key,
 /*   assert(self && * cp && (*cp)->kvreduce); */
 /*   return (*cp)->kvreduce(self, f, init); */
 /* } */
+
+void * INode_createNode(int shift, void * key1, void * val1, int key2hash,
+    void * key2, void * val2) {
+  int key1hash = hash_func(key1);
+  if(key1hash == key2hash) {
+    void * temp_array = Array_new(4);
+    Array_set(temp_array, 0, key1);
+    Array_set(temp_array, 1, val1);
+    Array_set(temp_array, 2, key2);
+    Array_set(temp_array, 3, val2);
+    return INode_new(HashCollisionNode_class, key1hash, 2, temp_array);
+  }
+  void * _ = Box_new(NULL);
+  void * temp_node = INode_assoc(BitmapIndexedNode_EMPTY, shift, key1hash, key1, val1, _);
+  return INode_assoc(temp_node, shift, key2hash, key2, val2, _);
+}
 
 void init_INodes(void * equiv, void * hash) {
   if(equiv == NULL) {
@@ -136,6 +158,14 @@ void * Array_cloneAndSet(void * array, int i, void * a) {
   void * new_array = Array_new(size);
   memcpy(new_array, array, sizeof(void *) * (size + 1));
   return Array_set(new_array, i, a);
+}
+
+void * Array_cloneAndSet2(void * array, int i, void * a, int j, void * b) {
+  int size = Array_size(array);
+  void * new_array = Array_new(size);
+  memcpy(new_array, array, sizeof(void *) * (size + 1));
+  Array_set(new_array, i, a);
+  return Array_set(new_array, j, b);
 }
 
 void * Array_removePair(void * array, int i) {
@@ -286,6 +316,15 @@ int PersistentHashMap_count(PersistentHashMap * phm) {
   return phm->count;
 }
 
+void PersistentHashMap_foreach(PersistentHashMap * phm, PHMFunc f, void * data) {
+  if(phm->hasNull) {
+    f(NULL, phm->nullValue, data);
+  }
+  if(phm->root != NULL) {
+    INode_foreach(phm->root, f, data);
+  }
+}
+
 /* ArrayNode */
 
 void * ArrayNode_ctor(void * self, va_list * app) {
@@ -354,6 +393,19 @@ void * ArrayNode_findDef(void * self, int shift, int hash, void * key,
     return notFound;
   }
   return INode_findDef(node, shift + 5, hash, key, notFound);
+}
+
+void ArrayNode_foreach(void * self, PHMFunc f, void * data) {
+  ArrayNode * an = (ArrayNode *)self;
+  int i;
+  void * n;
+  int count = an->count;
+  for(i = 0; i < count; i++) {
+    n = Array_get(an->array, i);
+    if(n != NULL) {
+      INode_foreach(n, f, data);
+    }
+  }
 }
 
 /* void * ArrayNode_nodeSeq(void * self); */
@@ -430,6 +482,11 @@ void * BitmapIndexedNode_assoc(void * self, int shift, int hash, void * key,
       return INode_new(BitmapIndexedNode_class, bin->bitmap,
           Array_cloneAndSet(bin->array, 2 * idx + 1, val));
     }
+    Box_set(addedLeaf, addedLeaf);
+    return INode_new(BitmapIndexedNode_class, bin->bitmap,
+        Array_cloneAndSet2(bin->array, 2 * idx, NULL, 2 * idx + 1,
+            INode_createNode(shift + 5, keyOrNull, valOrNode, hash,
+                key, val)));
   } else {
     int n = __builtin_popcount((unsigned int)(bin->bitmap));
     if(n >= 16) {
@@ -532,6 +589,17 @@ void * BitmapIndexedNode_findDef(void * self, int shift, int hash, void * key,
     return valOrNode;
   }
   return notFound;
+}
+
+void BitmapIndexedNode_foreach(void * self, PHMFunc f, void * data) {
+  BitmapIndexedNode * bin = (BitmapIndexedNode *)self;
+  int i;
+  int count = Array_size(bin->array);
+  void * key;
+  for(i = 0; i < count; i += 2) {
+    key = Array_get(bin->array, i);
+    // TODO: continue here: if()
+  }
 }
 
 /* void * BitmapIndexedNode_nodeSeq(void * self); */

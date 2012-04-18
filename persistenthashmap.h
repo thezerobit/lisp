@@ -20,6 +20,8 @@
  * Any errors are likely my own, or possibly inherited from Rich Hickey. :)
  */
 
+typedef void (*PHMFunc)(void * key, void * val, void * data);
+
 /* INode */
 
 typedef struct {
@@ -31,6 +33,7 @@ typedef struct {
   void * (* find) (void * self, int shift, int hash, void * key);
   void * (* findDef) (void * self, int shift, int hash, void * key,
       void * notFound);
+  void (* foreach) (void * self, PHMFunc f, void * data);
   /* void * (* nodeSeq) (void * self); */
   /* void * (* kvreduce) (void * self, void * f, void * init); */
 } INode;
@@ -42,8 +45,11 @@ void * INode_without(void * self, int shift, int hash, void * key);
 void * INode_find(void * self, int shift, int hash, void * key);
 void * INode_findDef(void * self, int shift, int hash, void * key,
     void * notFound);
+void INode_foreach(void * self, PHMFunc f, void * data);
 /* void * INode_nodeSeq(void * self); */
 /* void * INode_kvreduce(void * self, void * f, void * init); */
+void * INode_createNode(int shift, void * key1, void * val1, int key2hash,
+    void * key2, void * val2);
 
 void init_INodes(void * equiv, void * hash);
 
@@ -95,6 +101,7 @@ void * PersistentHashMap_valAt(PersistentHashMap * phm, void * key);
 PersistentHashMap * PersistentHashMap_without(PersistentHashMap * phm,
     void * key);
 int PersistentHashMap_count(PersistentHashMap * phm);
+void PersistentHashMap_foreach(PersistentHashMap * phm, PHMFunc f, void * data);
 
 /* ArrayNode */
 
@@ -113,6 +120,7 @@ void * ArrayNode_without(void * self, int shift, int hash, void * key);
 void * ArrayNode_find(void * self, int shift, int hash, void * key);
 void * ArrayNode_findDef(void * self, int shift, int hash, void * key,
     void * notFound);
+void ArrayNode_foreach(void * self, PHMFunc f, void * data);
 /* void * ArrayNode_nodeSeq(void * self); */
 /* void * ArrayNode_kvreduce(void * self, void * f, void * init); */
 //private
@@ -137,6 +145,7 @@ void * BitmapIndexedNode_without(void * self, int shift, int hash, void * key);
 void * BitmapIndexedNode_find(void * self, int shift, int hash, void * key);
 void * BitmapIndexedNode_findDef(void * self, int shift, int hash, void * key,
     void * notFound);
+void BitmapIndexedNode_foreach(void * self, PHMFunc f, void * data);
 /* void * BitmapIndexedNode_nodeSeq(void * self); */
 /* void * BitmapIndexedNode_kvreduce(void * self, void * f, void * init); */
 
@@ -165,6 +174,7 @@ void * HashCollisionNode_without(void * self, int shift, int hash, void * key);
 void * HashCollisionNode_find(void * self, int shift, int hash, void * key);
 void * HashCollisionNode_findDef(void * self, int shift, int hash, void * key,
     void * notFound);
+void HashCollisionNode_foreach(void * self, PHMFunc f, void * data);
 /* void * HashCollisionNode_nodeSeq(void * self); */
 /* void * HashCollisionNode_kvreduce(void * self, void * f, void * init); */
 
