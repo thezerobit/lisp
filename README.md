@@ -19,7 +19,7 @@ Things That Are Done
   * strings
   * vectors and vector literals
   * boolean values: true and false
-  * hash-map literals (except elements are unevaluated)
+  * functional hash-map literals
   * single 'quote syntax sugar
 
 * interpreted evaluation (evaluate)
@@ -46,6 +46,9 @@ Things That Are Done
 TODO
 ----
 
+* Better REPL
+* Better error handling
+* Ref type
 * comments
 * NIL, SYMBOL\_\*, etc should be constant
   * replace get\_other(p)->type with get\_type(p)

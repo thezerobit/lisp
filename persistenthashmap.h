@@ -60,6 +60,7 @@ int Array_size(void * array);
 void * Array_set(void * array, int i, void * a);
 void * Array_get(void * array, int i);
 void * Array_cloneAndSet(void * array, int i, void * a);
+void * Array_cloneAndSet2(void * array, int i, void * a, int j, void * b);
 void Array_copy(void * src, int srcPos, void * dest, int destPos, int length);
 void * Array_removePair(void * array, int i);
 

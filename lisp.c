@@ -333,6 +333,9 @@ int is_equal(pointer p, pointer o) {
       case TYPE_SYMBOL:
         return is_symbol_equal(p, o);
         break;
+      case TYPE_KEYWORD:
+        return is_keyword_equal(p, o);
+        break;
       case TYPE_INT:
         return (a->int_num == b->int_num);
         break;
@@ -354,6 +357,9 @@ int is_equal(pointer p, pointer o) {
           }
           return 1;
         }
+        break;
+      case TYPE_HASHMAP:
+        // TODO: compare key/vals
       default:
         return 0;
         break;
@@ -488,10 +494,27 @@ pointer evaluate_vector(pointer v, pointer env) {
   return (pointer)new_vec;
 }
 
+typedef struct {
+  void * env;
+  void * hm;
+} hash_builder;
+
+void add_to_hash(pointer key, pointer val, pointer data) {
+  hash_builder * hb = (hash_builder *)data;
+  void * new_key = evaluate(key, hb->env);
+  void * new_val = evaluate(val, hb->env);
+  hb->hm = PersistentHashMap_assoc(hb->hm, new_key, new_val);
+}
+
 pointer evaluate_hashmap(pointer h, pointer env) {
-  assert(is_hashmap(h));
-  // TODO: evaluate this stuff
-  return h;
+  HashMap hm = get_hashmap(h);
+  HashMap new_hm = new_hashmap();
+  hash_builder * hb = (hash_builder *)GC_MALLOC(sizeof(hash_builder));
+  hb->env = env;
+  hb->hm = PersistentHashMap_EMPTY;
+  PersistentHashMap_foreach(hm->phm, add_to_hash, hb);
+  new_hm->phm = hb->hm;
+  return new_hm;
 }
 
 pointer read_first(const char * input) {

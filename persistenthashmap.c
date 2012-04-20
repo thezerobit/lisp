@@ -105,6 +105,7 @@ void init_INodes(void * equiv, void * hash) {
   ArrayNode_class->without = ArrayNode_without;
   ArrayNode_class->find = ArrayNode_find;
   ArrayNode_class->findDef = ArrayNode_findDef;
+  ArrayNode_class->foreach = ArrayNode_foreach;
 
   BitmapIndexedNode_class = (INode *)GC_MALLOC(sizeof(INode));
   BitmapIndexedNode_class->size = sizeof(BitmapIndexedNode);
@@ -115,6 +116,7 @@ void init_INodes(void * equiv, void * hash) {
   BitmapIndexedNode_class->without = BitmapIndexedNode_without;
   BitmapIndexedNode_class->find = BitmapIndexedNode_find;
   BitmapIndexedNode_class->findDef = BitmapIndexedNode_findDef;
+  BitmapIndexedNode_class->foreach = BitmapIndexedNode_foreach;
 
   HashCollisionNode_class = (INode *)GC_MALLOC(sizeof(INode));
   HashCollisionNode_class->size = sizeof(HashCollisionNode);
@@ -123,6 +125,7 @@ void init_INodes(void * equiv, void * hash) {
   HashCollisionNode_class->without = HashCollisionNode_without;
   HashCollisionNode_class->find = HashCollisionNode_find;
   HashCollisionNode_class->findDef = HashCollisionNode_findDef;
+  HashCollisionNode_class->foreach = HashCollisionNode_foreach;
 
   PersistentHashMap_EMPTY = PersistentHashMap_new(0, NULL, 0, NULL);
   PersistentHashMap_NOT_FOUND = GC_MALLOC(sizeof(void *));
@@ -598,7 +601,15 @@ void BitmapIndexedNode_foreach(void * self, PHMFunc f, void * data) {
   void * key;
   for(i = 0; i < count; i += 2) {
     key = Array_get(bin->array, i);
-    // TODO: continue here: if()
+    if(key != NULL) {
+      void * value = Array_get(bin->array, i + 1);
+      f(key, value, data);
+    } else {
+      void * node = Array_get(bin->array, i + 1);
+      if(node != NULL) {
+        INode_foreach(node, f, data);
+      }
+    }
   }
 }
 
@@ -704,6 +715,25 @@ void * HashCollisionNode_findDef(void * self, int shift, int hash, void * key,
     return Array_get(hcn->array, idx + 1);
   }
   return notFound;
+}
+
+void HashCollisionNode_foreach(void * self, PHMFunc f, void * data) {
+  HashCollisionNode * hcn = (HashCollisionNode *)self;
+  int i;
+  int count = Array_size(hcn->array);
+  void * key;
+  for(i = 0; i < count; i += 2) {
+    key = Array_get(hcn->array, i);
+    if(key != NULL) {
+      void * value = Array_get(hcn->array, i + 1);
+      f(key, value, data);
+    } else {
+      void * node = Array_get(hcn->array, i + 1);
+      if(node != NULL) {
+        INode_foreach(node, f, data);
+      }
+    }
+  }
 }
 
 /* void * HashCollisionNode_nodeSeq(void * self); */
