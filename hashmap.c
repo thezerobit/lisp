@@ -38,6 +38,24 @@ pointer new_hashmap_from_list(pointer list) {
   return new_hm;
 }
 
+typedef struct {
+  pointer list;
+} list_builder;
+
+void add_to_list(pointer key, pointer val, pointer data) {
+  list_builder * plb = (list_builder *)data;
+  plb->list = new_pair(val, new_pair(key, plb->list));
+}
+
+pointer list_from_hashmap(pointer h) {
+  list_builder lb;
+  lb.list = NIL;
+  HashMap hm = get_hashmap(h);
+  PersistentHashMap_foreach(hm->phm, add_to_list, &lb);
+  pointer new_list = reverse(lb.list);
+  return new_list;
+}
+
 pointer hashmap_get(pointer m, pointer key, pointer notFound) {
   HashMap hm = get_hashmap(m);
   return PersistentHashMap_valAtDef(hm->phm, key, notFound);
@@ -57,8 +75,21 @@ pointer ff_hashmap_assoc(pointer l) {
 }
 
 void print_hashmap(pointer p) {
-  HashMap hm = get_hashmap(p);
-  printf("<hashmap (%d elems)>", hm->phm->count);
+  void * l = list_from_hashmap(p);
+  void * n;
+  printf("{");
+  n = l;
+  do {
+    print_thing(car(n));
+    printf(" ");
+    n = cdr(n);
+    print_thing(car(n));
+    n = cdr(n);
+    if(is_pair(n)) {
+      printf(", ");
+    }
+  } while (is_pair(n));
+  printf("}");
 }
 
 pointer ff_hashmap_get(pointer l) {
@@ -74,6 +105,11 @@ pointer ff_hashmap_get(pointer l) {
 pointer ff_list_to_hashmap(pointer l) {
   assert(count(l) == 1);
   return new_hashmap_from_list(car(l));
+}
+
+pointer ff_hashmap_to_list(pointer l) {
+  assert(count(l) == 1);
+  return list_from_hashmap(car(l));
 }
 
 

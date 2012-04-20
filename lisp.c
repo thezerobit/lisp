@@ -684,7 +684,15 @@ int is_symbol_char(char c) {
 }
 
 int is_whitespace(char c) {
-  return (c == ' ') || (c == '\t') || (c == '\n');
+  switch(c) {
+  case ' ':
+  case '\t':
+  case '\n':
+  case ',':
+    return 1;
+  default:
+    return 0;
+  }
 }
 
 void skip_whitespace(read_pointer * rp) {
@@ -1142,6 +1150,7 @@ pointer build_core_env() {
   def_env(env, new_symbol("assoc"), new_func(ff_hashmap_assoc));
   def_env(env, new_symbol("hash-map"), new_func(new_hashmap_from_list));
   def_env(env, new_symbol("list->hash-map"), new_func(ff_list_to_hashmap));
+  def_env(env, new_symbol("hash-map->list"), new_func(ff_hashmap_to_list));
   /* predicates */
   def_env(env, new_symbol("keyword?"), new_func(ff_is_keyword));
 
