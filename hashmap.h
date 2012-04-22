@@ -17,7 +17,7 @@ int is_hashmap(pointer p);
 HashMap get_hashmap(pointer p);
 pointer new_hashmap();
 pointer new_hashmap_from_list(pointer list);
-pointer list_from_hashmap(pointer hashmap);
+pointer list_from_hashmap(pointer h);
 pointer hashmap_get(pointer m, pointer key, pointer notFound);
 pointer ff_hashmap_assoc(pointer l);
 void print_hashmap(pointer p);

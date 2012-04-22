@@ -6,7 +6,7 @@
 /* HashMap */
 
 int is_hashmap(pointer p) {
-  return get_other(p)->type == TYPE_HASHMAP;
+  return get_type(p) == TYPE_HASHMAP;
 }
 
 HashMap get_hashmap(pointer p) {

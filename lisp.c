@@ -26,7 +26,7 @@ int is_nil (pointer p) {
 /* Pair */
 
 int is_pair(pointer p) {
-  return get_other(p)->type == TYPE_PAIR;
+  return get_type(p) == TYPE_PAIR;
 }
 
 Pair get_pair(pointer p) {
@@ -100,10 +100,14 @@ Other get_other(pointer p) {
   return (Other)p;
 }
 
+int get_type(pointer p) {
+  return ((Other)p)->type;
+}
+
 /* Int */
 
 int is_int(pointer p) {
-  return get_other(p)->type == TYPE_INT;
+  return get_type(p) == TYPE_INT;
 }
 
 pointer new_int(int64_t num) {
@@ -123,7 +127,7 @@ int64_t get_int(pointer p) {
 /* Func */
 
 int is_func(pointer p) {
-  return get_other(p)->type == TYPE_FUNC;
+  return get_type(p) == TYPE_FUNC;
 }
 
 pointer new_func(pointer (*f)(pointer)) {
@@ -145,7 +149,7 @@ void test_func() {
 /* String */
 
 int is_string(pointer p) {
-  return get_other(p)->type == TYPE_STRING;
+  return get_type(p) == TYPE_STRING;
 }
 
 pointer new_string(const char * s) {
@@ -163,7 +167,7 @@ const char * get_string(pointer p) {
 /* Boolean */
 
 int is_boolean(pointer p) {
-  return get_other(p)->type == TYPE_BOOLEAN;
+  return get_type(p) == TYPE_BOOLEAN;
 }
 
 pointer new_boolean(int b) {
@@ -181,7 +185,7 @@ int get_boolean(pointer p) {
 /* Lambda */
 
 int is_lambda(pointer p) {
-  return get_other(p)->type == TYPE_LAMBDA;
+  return get_type(p) == TYPE_LAMBDA;
 }
 
 pointer new_lambda(pointer arglist, pointer body, pointer env) {
@@ -244,7 +248,7 @@ lambda_start:
 /* Boink */
 
 int is_boink(pointer p) {
-  return get_other(p)->type == TYPE_BOINK;
+  return get_type(p) == TYPE_BOINK;
 }
 
 pointer new_boink(Lambda l, pointer args) {
@@ -317,12 +321,14 @@ int is_equal(pointer p, pointer o) {
   if(p == o) {
     return 1;
   }
+  int p_type = get_type(p);
+  int o_type = get_type(o);
   Other a = (Other)p;
   Other b = (Other)o;
-  if(a->type != b->type) {
+  if(p_type != o_type) {
     return 0;
   } else {
-    switch(a->type) {
+    switch(p_type) {
       case TYPE_PAIR:
         return is_equal(car(p), car(o)) && is_equal(cdr(p), cdr(o));
         break;
@@ -344,8 +350,8 @@ int is_equal(pointer p, pointer o) {
       case TYPE_STRING:
         return strcmp(a->str, b->str) == 0;
       case TYPE_VECTOR:
-        v1 = (Vector)a;
-        v2 = (Vector)b;
+        v1 = get_vector(p);
+        v2 = get_vector(o);
         if(v1->count != v1->count) {
           return 0;
         } else {
@@ -365,6 +371,7 @@ int is_equal(pointer p, pointer o) {
         break;
     }
   }
+  return 0; // make the static analyzers happy
 }
 
 void test_is_equal() {
@@ -418,7 +425,7 @@ void test_is_equal() {
 }
 
 int hash_thing(pointer p) {
-  int t = get_other(p)->type;
+  int t = get_type(p);
   int64_t i;
   switch(t) {
     case TYPE_PAIR:
@@ -911,7 +918,7 @@ void print_thing(pointer p) {
   pointer n;
   int i;
   Vector v;
-  switch(get_other(p)->type) {
+  switch(get_type(p)) {
     case TYPE_PAIR:
       printf("(");
       n = p;
@@ -967,7 +974,7 @@ void print_thing(pointer p) {
       print_hashmap(p);
       break;
     default:
-      printf("<unknown object %d>", get_other(p)->type);
+      printf("<unknown object %d>", get_type(p));
       break;
   }
 }

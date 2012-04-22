@@ -81,6 +81,7 @@ typedef struct {
 typedef other * Other;
 
 Other get_other(pointer p);
+int get_type(pointer p);
 
 /* Int */
 

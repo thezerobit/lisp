@@ -1,2 +1,4 @@
 lisp
 *.o
+.cproject
+.project

@@ -6,7 +6,7 @@
 /* Vector */
 
 int is_vector(pointer p) {
-  return get_other(p)->type == TYPE_VECTOR;
+  return get_type(p) == TYPE_VECTOR;
 }
 
 Vector get_vector(pointer p) {
