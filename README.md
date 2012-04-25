@@ -14,6 +14,7 @@ Things That Are Done
 --------------------
 * read
   * symbols
+  * keywords
   * lists
   * signed integers
   * strings
@@ -21,18 +22,21 @@ Things That Are Done
   * boolean values: true and false
   * functional hash-map literals
   * single 'quote syntax sugar
+  * ` and ~ quasiquote and unquote
 
 * interpreted evaluation (evaluate)
   * lookup symbols
   * call built-in functions
-  * QUOTE
-  * IF (false and empty list are false)
-  * numerical comparison, gt, lt, gte, lte
+  * "quote" or "'"
+  * "if" (false and empty list are false)
+  * numerical comparison, >, <, <=, >=, etc
   * = and != comparison for all types
   * lambda
   * def : mutable top-level scope
   * let, let\* and letrec
   * TCO (tail call optimization) for lambdas
+  * defmacro
+  * quasiquote, unquote
 
 * built-in functions
   * print and println
@@ -54,11 +58,9 @@ TODO
   * replace get\_other(p)->type with get\_type(p)
 * split stuff into separate files...
 * begin / do / progn
-* map, set
+* set
   * language support
   * literal syntax
-* macros
 * defn / defun
-* keywords
 * compilation
 

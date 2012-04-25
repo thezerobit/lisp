@@ -29,6 +29,8 @@ typedef GHashTable * MutableHash;
 
 pointer NIL;
 pointer SYMBOL_QUOTE;
+pointer SYMBOL_QUASIQUOTE;
+pointer SYMBOL_UNQUOTE;
 pointer SYMBOL_IF;
 pointer SYMBOL_TRUE;
 pointer SYMBOL_FALSE;
@@ -161,6 +163,7 @@ pointer evaluate_pair(pointer form, pointer env, int is_tail);
 pointer eval(pointer form, pointer env);
 pointer evaluate(pointer form, pointer env);
 pointer evaluate_inner(pointer form, pointer env, int is_tail);
+pointer quasiquote(pointer form, pointer env);
 void test_evaluate();
 
 /* macros */

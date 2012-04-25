@@ -469,6 +469,8 @@ void init_globals() {
   NIL = GC_MALLOC(sizeof(int));
   ((Other)NIL)->type = TYPE_NIL;
   SYMBOL_QUOTE = new_symbol("quote");
+  SYMBOL_QUASIQUOTE = new_symbol("quasiquote");
+  SYMBOL_UNQUOTE = new_symbol("unquote");
   SYMBOL_IF = new_symbol("if");
   SYMBOL_TRUE = new_symbol("true");
   SYMBOL_FALSE = new_symbol("false");
@@ -551,6 +553,10 @@ pointer evaluate_pair(pointer form, pointer env, int is_tail) {
   if(is_symbol_equal(first, SYMBOL_QUOTE)) {
     return car(cdr(form)); // unevaluated
   }
+  /* QUASIQUOTE */
+  if(is_symbol_equal(first, SYMBOL_QUASIQUOTE)) {
+    return quasiquote(car(cdr(form)), env); // unevaluated
+  }
   /* LAMBDA */
   if(is_symbol_equal(first, SYMBOL_LAMBDA)) {
     pointer rest = cdr(form);
@@ -599,7 +605,7 @@ pointer evaluate_pair(pointer form, pointer env, int is_tail) {
   /* TODO: macros */
   /* printf("first: "); print_thing(first); printf("\n"); */
   /* printf("first_eval: "); print_thing(first_eval); printf("\n"); */
-  /* printf("What is this?: "); print_thing(form); printf("\n"); */
+  printf("What is this?: "); print_thing(form); printf("\n");
   assert(0);
   return form;
 }
@@ -622,6 +628,25 @@ pointer evaluate_inner(pointer form, pointer env, int is_tail) {
     default:
       return form;
   }
+}
+
+pointer quasiquote(pointer form, pointer env) {
+  if(is_pair(form)) {
+    /* unquote? */
+    if(is_symbol_equal(car(form), SYMBOL_UNQUOTE)) {
+      return evaluate(car(cdr(form)), env);
+    }
+    /* quasiquote each element of list */
+    pointer result = NIL;
+    pointer next = form;
+    do {
+      result = new_pair(quasiquote(car(next), env), result);
+      next = cdr(next);
+    } while (is_pair(next));
+    return reverse(result);
+  }
+  /* return quoted atom */
+  return form;
 }
 
 pointer e(char * code, pointer env) {
@@ -888,6 +913,12 @@ pointer read_next(read_pointer * rp) {
   case '\'':
     read_required(rp, '\'');
     return new_pair(SYMBOL_QUOTE, new_pair(read_next(rp), NIL));
+  case '`':
+    read_required(rp, '`');
+    return new_pair(SYMBOL_QUASIQUOTE, new_pair(read_next(rp), NIL));
+  case '~':
+    read_required(rp, '~');
+    return new_pair(SYMBOL_UNQUOTE, new_pair(read_next(rp), NIL));
   default:
     break;
   }
