@@ -1,14 +1,51 @@
 #include <stdio.h>
 #include <assert.h>
+#include "gc.h"
 #include "env.h"
 #include "symbol.h"
 #include "mutable_hash.h"
+
+/* Inner Env */
+
+typedef struct {
+  pointer defs;
+  pointer macros;
+} inner_env;
+
+pointer new_inner_env() {
+  inner_env * nenv = (inner_env *)GC_MALLOC(sizeof(inner_env));
+  nenv->defs = new_mutable_hash();
+  nenv->macros = new_mutable_hash();
+  return nenv;
+}
+
+void inner_env_def(pointer e, pointer key, pointer val) {
+  inner_env * ie = (inner_env *)e;
+  mutable_hash_set(ie->defs, key, val);
+}
+
+pointer inner_env_def_lookup(pointer e, pointer key) {
+  inner_env * ie = (inner_env *)e;
+  return mutable_hash_get(ie->defs, key);
+}
+
+void inner_env_defmacro(pointer e, pointer key, pointer val) {
+  inner_env * ie = (inner_env *)e;
+  mutable_hash_set(ie->macros, key, val);
+}
+
+pointer inner_env_defmacro_lookup(pointer e, pointer key) {
+  inner_env * ie = (inner_env *)e;
+  return mutable_hash_get(ie->macros, key);
+}
+
+/* Env */
 
 pointer make_env() {
   return new_pair(
       NIL,
       new_pair(
-        new_mutable_hash(),
+        new_inner_env(),
         NIL));
 }
 
@@ -24,8 +61,14 @@ pointer add_env(pointer env, pointer sym, pointer value) {
 }
 
 pointer def_env(pointer env, pointer sym, pointer value) {
-  pointer hash = car(cdr(env));
-  mutable_hash_set(hash, sym, value);
+  pointer inner_env = car(cdr(env));
+  inner_env_def(inner_env, sym, value);
+  return env;
+}
+
+pointer defmacro_env(pointer env, pointer sym, pointer value) {
+  pointer inner_env = car(cdr(env));
+  inner_env_defmacro(inner_env, sym, value);
   return env;
 }
 
@@ -61,23 +104,24 @@ pointer lookup_scope(pointer scope, pointer sym) {
 }
 
 pointer lookup_env(pointer env, pointer sym) {
-  /* printf("lookup_env %s", get_symbol(sym)->name); */
-  /* printf(" in "); print_thing(env); printf("\n"); */
   pointer scope = car(env);
   pointer found = lookup_scope(scope, sym);
   if(found != NULL) {
-    /* printf(" found "); print_thing(found); printf("\n"); */
     return found;
   }
-  pointer hash = car(cdr(env));
-  found = mutable_hash_get(hash, sym);
+  pointer inner_env = car(cdr(env));
+  found = inner_env_def_lookup(inner_env, sym);
   if(found != NULL) {
-    /* printf(" found "); print_thing(found); printf("\n"); */
     return found;
   }
   printf("symbol not found: %s\n", get_symbol(sym)->name);
   assert(0);
   return NULL;
+}
+
+pointer lookup_macro_env(pointer env, pointer sym) {
+  pointer inner_env = car(cdr(env));
+  return inner_env_defmacro_lookup(inner_env, sym);
 }
 
 void test_env() {

@@ -40,6 +40,7 @@ pointer SYMBOL_SYS;
 pointer SYMBOL_LET;
 pointer SYMBOL_LET_STAR;
 pointer SYMBOL_LETREC;
+pointer SYMBOL_DEFMACRO;
 
 int is_nil (pointer p);
 pointer new_nil();
@@ -162,6 +163,12 @@ pointer evaluate(pointer form, pointer env);
 pointer evaluate_inner(pointer form, pointer env, int is_tail);
 void test_evaluate();
 
+/* macros */
+
+pointer macro_pass(pointer form, pointer env);
+pointer macro_pass_each(pointer form, pointer env);
+pointer macro_expand_all(pointer macro, pointer body, pointer env);
+
 /* read */
 
 typedef struct {
@@ -201,6 +208,7 @@ pointer ff_div(pointer args);
 pointer ff_lt(pointer args);
 pointer ff_gt(pointer args);
 pointer not(pointer p);
+pointer ff_not(pointer p);
 pointer ff_lte(pointer args);
 pointer ff_gte(pointer args);
 pointer ff_eq(pointer args);

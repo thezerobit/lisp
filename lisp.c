@@ -480,6 +480,7 @@ void init_globals() {
   SYMBOL_LET = new_symbol("let");
   SYMBOL_LET_STAR = new_symbol("let*");
   SYMBOL_LETREC = new_symbol("letrec");
+  SYMBOL_DEFMACRO = new_symbol("defmacro");
 }
 
 pointer evaluate_list(pointer args, pointer env) {
@@ -661,6 +662,49 @@ void test_evaluate() {
   // pretty resilient. Set the 100 to 1000000 in next line to prove that
   // it is working.
   assert(is_equal(new_int(0), e("(letrec (b (lambda (x) (if (<= x 0) x (b (- x 1))))) (b 100))", env)));
+}
+
+/* macros */
+
+pointer macro_pass(pointer forms, pointer env) {
+  pointer pforms = NIL;
+  pointer n;
+  n = forms;
+  do {
+    pforms = new_pair(macro_pass_each(car(n), env), pforms);
+    n = cdr(n);
+  } while (is_pair(n));
+  pforms = reverse(pforms);
+  return pforms;
+}
+
+pointer macro_pass_each(pointer form, pointer env) {
+  if(is_pair(form)) {
+    pointer first = car(form);
+    pointer rest = cdr(form);
+    if(is_symbol_equal(first, SYMBOL_DEFMACRO)) {
+      pointer macro_name = car(rest);
+      rest = cdr(rest);
+      pointer arglist = car(rest);
+      pointer body_forms = cdr(rest);
+      pointer macro = new_lambda(arglist, body_forms, env);
+      defmacro_env(env, macro_name, macro);
+      return NIL;
+    } else if(is_symbol(first)) {
+      pointer macro = lookup_macro_env(env, first);
+      if(macro) {
+        assert(is_lambda(macro));
+        return macro_expand_all(macro, rest, env);
+      }
+    }
+  }
+  return form;
+}
+
+pointer macro_expand_all(pointer macro, pointer body, pointer env) {
+  Lambda l = get_lambda(macro);
+  pointer new_form = call_lambda(l, body);
+  return macro_pass_each(new_form, env);
 }
 
 /* read */
@@ -1078,6 +1122,10 @@ pointer not(pointer p) {
   return BOOLEAN_FALSE;
 }
 
+pointer ff_not(pointer p) {
+  return not(car(p));
+}
+
 pointer ff_lte(pointer args) {
   return not(ff_gt(args));
 }
@@ -1124,6 +1172,8 @@ pointer build_core_env() {
   pointer env = make_env();
   def_env(env, SYMBOL_TRUE, BOOLEAN_TRUE);
   def_env(env, SYMBOL_FALSE, BOOLEAN_FALSE);
+  /* logical */
+  def_env(env, new_symbol("not"), new_func(ff_not));
   /* print */
   def_env(env, new_symbol("print"), new_func(ff_print));
   def_env(env, new_symbol("println"), new_func(ff_println));
@@ -1197,7 +1247,8 @@ void load_file(char * filename, pointer env) {
   gsize file_length;
   gboolean success = g_file_load_contents(gf, 0, &file_contents, &file_length, 0, 0);
   if(success) {
-    pointer forms = read_from_string(file_contents);
+    pointer iforms = read_from_string(file_contents);
+    pointer forms = macro_pass(iforms, env);
     while(is_pair(forms)) {
       evaluate(car(forms), env);
       forms = cdr(forms);
@@ -1217,7 +1268,10 @@ void do_repl(pointer env) {
       break;
     }
 
-    pointer forms = read_from_string(in);
+    pointer iforms = read_from_string(in);
+    /* printf("Entered: "); print_thing(iforms); printf("\n"); */
+    pointer forms = macro_pass(iforms, env);
+    /* printf("After Macro Pass: "); print_thing(forms); printf("\n"); */
     pointer val;
     while(is_pair(forms)) {
       print_thing(evaluate(car(forms), env));
