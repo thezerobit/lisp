@@ -784,6 +784,7 @@ int is_whitespace(char c) {
 }
 
 void skip_whitespace(read_pointer * rp) {
+skip_whitey:
   while(is_whitespace(*(rp->loc))) {
     if(*(rp->loc) == '\n') {
       rp->line++;
@@ -792,6 +793,13 @@ void skip_whitespace(read_pointer * rp) {
       rp->col++;
     }
     rp->loc++;
+  }
+  if(*(rp->loc)==';') {
+    do {
+      rp->loc++;
+      rp->col++;
+    } while(*(rp->loc) != '\n');
+    goto skip_whitey;
   }
 }
 
