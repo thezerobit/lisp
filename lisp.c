@@ -1,6 +1,7 @@
 /* BOEHM! */
 #include "gc.h"
 #include "readline/readline.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
@@ -1314,10 +1315,13 @@ void do_repl(pointer env) {
   printf("\nType exit to exit.\n");
   while(1) {
     const char * in;
-    in = readline(prompt);
-    if(strcmp(in, "exit") == 0) {
+    void * buf;
+    buf = readline(prompt);
+    in = (const char *)buf;
+    if(in == NULL || strcmp(in, "exit") == 0) {
       break;
     }
+    add_history(in);
 
     pointer iforms = read_from_string(in);
     /* printf("Entered: "); print_thing(iforms); printf("\n"); */
@@ -1329,6 +1333,7 @@ void do_repl(pointer env) {
       printf("\n");
       forms = cdr(forms);
     }
+    free(buf);
   }
 
   printf("Goodbye.\n");
