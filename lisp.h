@@ -43,6 +43,7 @@ pointer SYMBOL_LET;
 pointer SYMBOL_LET_STAR;
 pointer SYMBOL_LETREC;
 pointer SYMBOL_DEFMACRO;
+pointer SYMBOL_AMPERSAND;
 
 int is_nil (pointer p);
 pointer new_nil();

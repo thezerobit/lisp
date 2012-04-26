@@ -213,20 +213,31 @@ pointer evaluate_block(pointer body, pointer env) {
 }
 
 pointer call_lambda(Lambda l, pointer arglist) {
+  pointer env, args, argsymbols;
   // build env from arglist
 lambda_start:
-  assert(count(arglist) == count(l->arglist));
-  pointer env = l->env;
-  pointer args = arglist;
-  pointer argsymbols = l->arglist;
+  env = l->env;
+  args = arglist;
+  argsymbols = l->arglist;
   while(is_pair(args)) {
     pointer sym = car(argsymbols);
     assert(is_symbol(sym));
-    env = add_env(env, sym, car(args));
-    args = cdr(args);
-    argsymbols = cdr(argsymbols);
+    /* bind the rest of the args in a list to "... & foo)" */
+    if(is_symbol_equal(sym, SYMBOL_AMPERSAND)) {
+      argsymbols = cdr(argsymbols);
+      sym = car(argsymbols);
+      env = add_env(env, sym, args);
+      args = NIL;
+      argsymbols = cdr(argsymbols);
+    } else {
+      env = add_env(env, sym, car(args));
+      args = cdr(args);
+      argsymbols = cdr(argsymbols);
+    }
   }
-  // evaluate forms in new environment, return last or nil
+  assert(is_nil(argsymbols)); /* too many symbols */
+  assert(is_nil(args)); /* too many arguments */
+  /* evaluate forms in new environment, return last or nil
   /* return evaluate_block(l->body, env); */
   pointer body = l->body;
   pointer result = NIL;
@@ -483,6 +494,7 @@ void init_globals() {
   SYMBOL_LET_STAR = new_symbol("let*");
   SYMBOL_LETREC = new_symbol("letrec");
   SYMBOL_DEFMACRO = new_symbol("defmacro");
+  SYMBOL_AMPERSAND = new_symbol("&");
 }
 
 pointer evaluate_list(pointer args, pointer env) {
@@ -743,7 +755,7 @@ int is_first_symbol_char(char c) {
   if(is_alpha(c)) {
     return 1;
   }
-  return strchr("+*-!/><=?", c) != NULL;
+  return strchr("+*-!/><=?&", c) != NULL;
 }
 
 int is_numeric(char c) {
