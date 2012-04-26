@@ -37,6 +37,7 @@ Things That Are Done
   * TCO (tail call optimization) for lambdas
   * defmacro
   * quasiquote, unquote
+  * variadic lambda eg. (arg1 arg2 & args)
 
 * built-in functions
   * print and println
