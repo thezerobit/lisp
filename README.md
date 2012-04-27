@@ -23,6 +23,7 @@ Things That Are Done
   * functional hash-map literals
   * single 'quote syntax sugar
   * ` and ~ quasiquote and unquote
+  * comments
 
 * interpreted evaluation (evaluate)
   * lookup symbols
@@ -54,7 +55,6 @@ TODO
 * Better REPL
 * Better error handling
 * Ref type
-* comments
 * NIL, SYMBOL\_\*, etc should be constant
   * replace get\_other(p)->type with get\_type(p)
 * split stuff into separate files...
@@ -64,4 +64,5 @@ TODO
   * literal syntax
 * defn / defun
 * compilation
+* math stuff
 

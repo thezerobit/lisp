@@ -200,6 +200,11 @@ pointer read_vec(read_pointer * rp);
 pointer read_hashmap(read_pointer * rp);
 pointer read_from_string(const char * input);
 
+/* check */
+
+void check(int cond, const char * desc);
+void check_rp(int cond, const char * desc, read_pointer * rp);
+
 /* print */
 
 void print_thing(pointer p);

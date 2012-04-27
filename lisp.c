@@ -3,6 +3,7 @@
 #include "readline/readline.h"
 #include <stdlib.h>
 #include <stdio.h>
+#include <setjmp.h>
 #include <string.h>
 #include <assert.h>
 #include <stdint.h>
@@ -31,13 +32,13 @@ int is_pair(pointer p) {
 }
 
 Pair get_pair(pointer p) {
-  assert(is_pair(p));
+  check(is_pair(p), "Pair expected.");
   return (Pair)p;
 }
 
 pointer new_pair(pointer car, pointer cdr) {
-  assert(car);
-  assert(cdr);
+  check(car != NULL, "new_pair: car is null.");
+  check(cdr != NULL, "new_pair: cdr is null.");
   Pair cell = (Pair)GC_MALLOC(sizeof(pair));
   cell->type = TYPE_PAIR;
   cell->car = car;
@@ -73,7 +74,7 @@ pointer reverse(pointer p) {
 }
 
 int count(pointer p) {
-  assert(is_nil(p) || is_pair(p));
+  check(is_nil(p) || is_pair(p), "count: p should be pair or nil");
   if(is_nil(p)) {
     return 0;
   }
@@ -121,7 +122,7 @@ pointer new_int(int64_t num) {
 
 int64_t get_int(pointer p) {
   Other o = (Other)p;
-  assert(is_int(p));
+  check(is_int(p), "get_int: p is not an int");
   return get_other(p)->int_num;
 }
 
@@ -144,7 +145,8 @@ pointer call_func(pointer f, pointer arglist) {
 
 void test_func() {
   pointer print = new_func(ff_plus);
-  assert(is_equal(new_int(10), call_func(print, new_pair(new_int(10), NIL))));
+  check(is_equal(new_int(10), call_func(print, new_pair(new_int(10), NIL))),
+      "test_func: result incorrect");
 }
 
 /* String */
@@ -161,7 +163,7 @@ pointer new_string(const char * s) {
 }
 
 const char * get_string(pointer p) {
-  assert(is_string(p));
+  check(is_string(p), "get_string: p is not a string");
   return get_other(p)->str;
 }
 
@@ -179,7 +181,7 @@ pointer new_boolean(int b) {
 }
 
 int get_boolean(pointer p) {
-  assert(is_boolean(p));
+  check(is_boolean(p), "get_boolean: p is not boolean");
   return (int)(get_other(p)->int_num);
 }
 
@@ -199,7 +201,7 @@ pointer new_lambda(pointer arglist, pointer body, pointer env) {
 }
 
 Lambda get_lambda(pointer p) {
-  assert(is_lambda(p));
+  check(is_lambda(p), "get_lambda: p is not lambda");
   return (Lambda)p;
 }
 
@@ -222,7 +224,7 @@ lambda_start:
   argsymbols = l->arglist;
   while(is_pair(args)) {
     pointer sym = car(argsymbols);
-    assert(is_symbol(sym));
+    check(is_symbol(sym), "call_lambda: sym is not symbol");
     /* bind the rest of the args in a list to "... & foo)" */
     if(is_symbol_equal(sym, SYMBOL_AMPERSAND)) {
       argsymbols = cdr(argsymbols);
@@ -236,8 +238,8 @@ lambda_start:
       argsymbols = cdr(argsymbols);
     }
   }
-  assert(is_nil(argsymbols)); /* too many symbols */
-  assert(is_nil(args)); /* too many arguments */
+  check(is_nil(argsymbols), "call_lambda: too many symbols");
+  check(is_nil(args), "call_lambda: too many arguments");
   /* evaluate forms in new environment, return last or nil
   /* return evaluate_block(l->body, env); */
   pointer body = l->body;
@@ -272,7 +274,7 @@ pointer new_boink(Lambda l, pointer args) {
 }
 
 Boink get_boink(pointer p) {
-  assert(is_boink(p));
+  check(is_boink(p), "get_boink: p is not boink");
   return (Boink)p;
 }
 
@@ -284,7 +286,7 @@ Boink get_boink(pointer p) {
  */
 pointer get_letrec_env(pointer defs, pointer env) {
   int c = count(defs);
-  assert(c % 2 == 0);
+  check(c % 2 == 0, "get_letrec_env: uneven number of forms");
   while(is_pair(defs)) {
     env = add_env(env, car(defs), NIL);
     defs = cdr(cdr(defs));
@@ -296,7 +298,7 @@ pointer evaluate_let(pointer both, pointer env, pointer which) {
   pointer defs = car(both);
   pointer body = cdr(both);
   int c = count(defs);
-  assert(c % 2 == 0);
+  check(c % 2 == 0, "evaluate_let: uneven number of forms");
   pointer new_env = env;
   pointer lh, rh;
   if(is_symbol_equal(which, SYMBOL_LETREC)) {
@@ -305,7 +307,7 @@ pointer evaluate_let(pointer both, pointer env, pointer which) {
 
   while(is_pair(defs)) {
     lh = car(defs);
-    assert(is_symbol(lh));
+    check(is_symbol(lh), "evaluate_let: form is not symbol");
     defs = cdr(defs);
     if(is_symbol_equal(which, SYMBOL_LET_STAR)) {
       rh = evaluate(car(defs), new_env);
@@ -346,7 +348,7 @@ int is_equal(pointer p, pointer o) {
         break;
       case TYPE_NIL:
         /* two nil values should have same pointer value already */
-        assert(0);
+        check(0, "is_equal: two NILs with different value");
         break;
       case TYPE_SYMBOL:
         return is_symbol_equal(p, o);
@@ -507,7 +509,7 @@ pointer evaluate_list(pointer args, pointer env) {
 }
 
 pointer evaluate_vector(pointer v, pointer env) {
-  assert(is_vector(v));
+  check(is_vector(v), "evaluate_vector: v is not vector");
   Vector old_vec = get_vector(v);
   Vector new_vec = alloc_vector(old_vec->count);
   int i;
@@ -550,7 +552,8 @@ pointer evaluate_pair(pointer form, pointer env, int is_tail) {
   /* IF */
   if(is_symbol_equal(first, SYMBOL_IF)) {
     int length = count(cdr(form));
-    assert(length == 2 || length == 3);
+    check(length == 2 || length == 3,
+        "evaluate_pair: 'if' clause has wrong number of forms");
     pointer second = evaluate(car(cdr(form)), env);
     if(is_nil(second) || second == BOOLEAN_FALSE) {
       if(length > 2) {
@@ -578,7 +581,7 @@ pointer evaluate_pair(pointer form, pointer env, int is_tail) {
   /* DEF */
   if(is_symbol_equal(first, SYMBOL_DEF)) {
     pointer def_name = car(cdr(form));
-    assert(is_symbol(def_name));
+    check(is_symbol(def_name), "evaluate_pair: 'def' used with non-symbol");
     pointer def_form = evaluate(car(cdr(cdr(form))), env);
     def_env(env, def_name, def_form);
     return def_form;
@@ -615,11 +618,10 @@ pointer evaluate_pair(pointer form, pointer env, int is_tail) {
       return call_lambda(lam, args);
     }
   }
-  /* TODO: macros */
   /* printf("first: "); print_thing(first); printf("\n"); */
   /* printf("first_eval: "); print_thing(first_eval); printf("\n"); */
   printf("What is this?: "); print_thing(form); printf("\n");
-  assert(0);
+  check(0, "evaluate_pair: form is not special form, or lambda");
   return form;
 }
 
@@ -731,7 +733,7 @@ pointer macro_pass_each(pointer form, pointer env) {
     } else if(is_symbol(first)) {
       pointer macro = lookup_macro_env(env, first);
       if(macro) {
-        assert(is_lambda(macro));
+        check(is_lambda(macro), "macro_pass_each: macro is not lambda");
         return macro_expand_all(macro, rest, env);
       }
     }
@@ -806,7 +808,7 @@ skip_whitey:
 
 int read_required(read_pointer * rp, char c) {
   char actual = *(rp->loc);
-  assert(actual == c);
+  check_rp(actual == c, "read_required: unexpected character found", rp);
   if(actual == c) {
     rp->loc++;
     rp->col++;
@@ -862,13 +864,13 @@ pointer read_number(read_pointer * rp) {
 }
 
 pointer read_string(read_pointer * rp) {
-  assert((*rp->loc) == '"');
+  check_rp((*rp->loc) == '"', "read_string: first char is not double-quote", rp);
 
   const char * next = rp->loc + 1;
   int length = 0;
   int escape_next = 0;
   while(1) {
-    assert((*next) != 0);
+    check_rp((*next) != 0, "read_string: unexpected null char", rp);
     if(escape_next) {
       next++;
       length++;
@@ -893,7 +895,7 @@ pointer read_string(read_pointer * rp) {
   escape_next = 0;
   char * p_n_string = n_string;
   while(1) {
-    assert((*rp->loc) != 0);
+    check_rp((*rp->loc) != 0, "read_string: unexpected null char", rp);
     if(escape_next) {
       (*p_n_string++) = (*rp->loc++);
       escape_next = 0;
@@ -1006,6 +1008,26 @@ pointer read_from_string(const char * input) {
   /* reverse it */
   pointer list = reverse(last_pair);
   return list;
+}
+
+/* check */
+
+void check(int cond, const char * desc) {
+  if(!cond) {
+    fprintf(stderr, "Error: %s.\n", desc);
+    assert(0 == "check failed");
+  }
+}
+
+void check_rp(int cond, const char * desc, read_pointer * rp) {
+  if(!cond) {
+    if(rp == NULL) {
+      fprintf(stderr, "Error: %s.\n", desc);
+    } else {
+      fprintf(stderr, "Error: %s. Line %d, col %d.", desc, rp->line, rp->col);
+    }
+    assert(0 == "check failed");
+  }
 }
 
 /* print */
