@@ -46,6 +46,10 @@ Things That Are Done
   * list: list, first/car, rest/cdr
   * vector: vector, vector->list, list->vector
   * hash-map: hash-map, list->hash-map, get, assoc
+  * reverse, cons
+  
+* core macros
+  * defun
 
 * rudimentary REPL
 
@@ -62,7 +66,7 @@ TODO
 * set
   * language support
   * literal syntax
-* defn / defun
+* Better vector
 * compilation
 * math stuff
 

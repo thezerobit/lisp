@@ -73,6 +73,10 @@ pointer reverse(pointer p) {
   return last;
 }
 
+pointer ff_reverse(pointer p) {
+  return reverse(car(p));
+}
+
 int count(pointer p) {
   check(is_nil(p) || is_pair(p), "count: p should be pair or nil");
   if(is_nil(p)) {
@@ -755,7 +759,9 @@ pointer macro_pass_each(pointer form, pointer env) {
 
 pointer macro_expand_all(pointer macro, pointer body, pointer env) {
   Lambda l = get_lambda(macro);
+  print_thing(body); printf("\n");
   pointer new_form = call_lambda(l, body);
+  print_thing(new_form);printf("\n");
   return macro_pass_each(new_form, env);
 }
 
@@ -1289,6 +1295,7 @@ pointer build_core_env() {
   def_env(env, new_symbol("first"), car_func);
   def_env(env, new_symbol("cdr"), cdr_func);
   def_env(env, new_symbol("rest"), cdr_func);
+  def_env(env, new_symbol("reverse"), new_func(ff_reverse));
   def_env(env, new_symbol("cons"), new_func(ff_cons));
   /* vector */
   def_env(env, new_symbol("vector"), new_func(new_vector_from_list));
