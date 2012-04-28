@@ -89,11 +89,6 @@ typedef other * Other;
 Other get_other(pointer p);
 int get_type(pointer p);
 
-/* Int */
-
-int is_int(pointer p);
-pointer new_int(int64_t num);
-int64_t get_int(pointer p);
 
 /* Func */
 
@@ -212,16 +207,14 @@ void check_rp(int cond, const char * desc, read_pointer * rp);
 void print_thing(pointer p);
 pointer ff_print(pointer args);
 pointer ff_println(pointer args);
-pointer ff_plus(pointer args);
-pointer ff_minus(pointer args);
-pointer ff_mult(pointer args);
-pointer ff_div(pointer args);
-pointer ff_lt(pointer args);
-pointer ff_gt(pointer args);
 pointer not(pointer p);
 pointer ff_not(pointer p);
-pointer ff_lte(pointer args);
-pointer ff_gte(pointer args);
+pointer ff_list(pointer args);
+pointer ff_car(pointer args);
+pointer ff_cdr(pointer args);
+
+/* Equality */
+
 pointer ff_eq(pointer args);
 pointer ff_neq(pointer args);
 
