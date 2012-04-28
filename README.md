@@ -37,7 +37,7 @@ Things That Are Done
   * let, let\* and letrec
   * TCO (tail call optimization) for lambdas
   * defmacro
-  * quasiquote, unquote
+  * quasiquote (`), unquote (~), unquote-splicing (~@)
   * variadic lambda eg. (arg1 arg2 & args)
 
 * built-in functions

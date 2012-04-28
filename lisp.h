@@ -31,6 +31,7 @@ pointer NIL;
 pointer SYMBOL_QUOTE;
 pointer SYMBOL_QUASIQUOTE;
 pointer SYMBOL_UNQUOTE;
+pointer SYMBOL_UNQUOTESPLICING;
 pointer SYMBOL_IF;
 pointer SYMBOL_TRUE;
 pointer SYMBOL_FALSE;

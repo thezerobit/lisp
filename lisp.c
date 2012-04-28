@@ -485,6 +485,7 @@ void init_globals() {
   SYMBOL_QUOTE = new_symbol("quote");
   SYMBOL_QUASIQUOTE = new_symbol("quasiquote");
   SYMBOL_UNQUOTE = new_symbol("unquote");
+  SYMBOL_UNQUOTESPLICING = new_symbol("unquote-splicing");
   SYMBOL_IF = new_symbol("if");
   SYMBOL_TRUE = new_symbol("true");
   SYMBOL_FALSE = new_symbol("false");
@@ -655,7 +656,18 @@ pointer quasiquote(pointer form, pointer env) {
     pointer result = NIL;
     pointer next = form;
     do {
-      result = new_pair(quasiquote(car(next), env), result);
+      pointer elem = car(next);
+      if(is_pair(elem) && car(elem) == SYMBOL_UNQUOTESPLICING) {
+        pointer sub_list = evaluate(car(cdr(elem)), env);
+        check(is_pair(sub_list) || is_nil(sub_list),
+            "quasiquote: unquote-splicing non-nil, non-list");
+        while(is_pair(sub_list)) {
+          result = new_pair(car(sub_list), result);
+          sub_list = cdr(sub_list);
+        }
+      } else {
+        result = new_pair(quasiquote(elem, env), result);
+      }
       next = cdr(next);
     } while (is_pair(next));
     return reverse(result);
@@ -918,8 +930,9 @@ pointer read_string(read_pointer * rp) {
 }
 
 pointer read_next(read_pointer * rp) {
+  char next, succ;
   skip_whitespace(rp);
-  char next = *(rp->loc);
+  next = *(rp->loc);
   switch(next) {
   case 0:
     return NULL;
@@ -941,11 +954,17 @@ pointer read_next(read_pointer * rp) {
     return new_pair(SYMBOL_QUASIQUOTE, new_pair(read_next(rp), NIL));
   case '~':
     read_required(rp, '~');
-    return new_pair(SYMBOL_UNQUOTE, new_pair(read_next(rp), NIL));
+    next = *(rp->loc);
+    if(next != '@') {
+      return new_pair(SYMBOL_UNQUOTE, new_pair(read_next(rp), NIL));
+    } else {
+      read_required(rp, '@');
+      return new_pair(SYMBOL_UNQUOTESPLICING, new_pair(read_next(rp), NIL));
+    }
   default:
     break;
   }
-  char succ = *(rp->loc + 1);
+  succ = *(rp->loc + 1);
   if(is_numeric(next) || (next == '-' && is_numeric(succ))) {
     return read_number(rp);
   } else if(is_first_symbol_char(next)) {
