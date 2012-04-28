@@ -759,9 +759,9 @@ pointer macro_pass_each(pointer form, pointer env) {
 
 pointer macro_expand_all(pointer macro, pointer body, pointer env) {
   Lambda l = get_lambda(macro);
-  print_thing(body); printf("\n");
+  /* print_thing(body); printf("\n"); */
   pointer new_form = call_lambda(l, body);
-  print_thing(new_form);printf("\n");
+  /* print_thing(new_form);printf("\n"); */
   return macro_pass_each(new_form, env);
 }
 
