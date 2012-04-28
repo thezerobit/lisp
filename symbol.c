@@ -2,9 +2,11 @@
 #include <glib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <string.h>
 #include "symbol.h"
 
 GHashTable* g_symbols;
+int gensym_counter = 1;
 
 void init_symbols() {
   g_symbols = g_hash_table_new(g_str_hash, g_str_equal);
@@ -33,4 +35,28 @@ Symbol get_symbol(pointer p) {
 
 int is_symbol_equal(pointer p, pointer o) {
   return p == o;
+}
+
+pointer gensym(const char * prefix) {
+  char temp[128];
+  sprintf(temp, "%s_%d", prefix, gensym_counter++);
+  int length = strlen(temp);
+  char * new_string = (char *)GC_MALLOC(length+1);
+  strcpy(new_string, temp);
+  return new_symbol(new_string);
+}
+
+pointer ff_gensym(pointer p) {
+  if(is_nil(p)) {
+    return gensym("_gsym_");
+  }
+  pointer name = car(p);
+  if(is_string(name)){
+    const char * prefix = get_string(name);
+    return gensym(prefix);
+  } else if(is_symbol(name)) {
+    const char * prefix = get_symbol(name)->name;
+    return gensym(prefix);
+  }
+  return NIL;
 }

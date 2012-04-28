@@ -1297,6 +1297,8 @@ pointer build_core_env() {
   def_env(env, new_symbol("rest"), cdr_func);
   def_env(env, new_symbol("reverse"), new_func(ff_reverse));
   def_env(env, new_symbol("cons"), new_func(ff_cons));
+  /* symbols */
+  def_env(env, new_symbol("gensym"), new_func(ff_gensym));
   /* vector */
   def_env(env, new_symbol("vector"), new_func(new_vector_from_list));
   def_env(env, new_symbol("vector-ref"), new_func(ff_vector_ref));

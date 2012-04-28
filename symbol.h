@@ -15,5 +15,7 @@ int is_symbol(pointer p);
 pointer new_symbol(const char * name);
 Symbol get_symbol(pointer p);
 int is_symbol_equal(pointer p, pointer o);
+pointer gensym(const char * prefix);
+pointer ff_gensym(pointer p);
 
 #endif /* SYMBOL_H */

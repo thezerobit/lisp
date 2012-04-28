@@ -47,6 +47,7 @@ Things That Are Done
   * vector: vector, vector->list, list->vector
   * hash-map: hash-map, list->hash-map, get, assoc
   * reverse, cons
+  * gensym
   
 * core macros
   * defun
@@ -56,6 +57,7 @@ Things That Are Done
 TODO
 ----
 
+* implicit gensyms in quasiquote
 * Better REPL
 * Better error handling
 * Ref type
@@ -69,4 +71,5 @@ TODO
 * Better vector
 * compilation
 * math stuff
+* namespaces
 
