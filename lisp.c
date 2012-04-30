@@ -21,6 +21,8 @@
 #include "numbers.h"
 #include "type.h"
 
+type_assoc * ta_is_equal;
+
 void init_types() {
   TYPE_PAIR = new_type("pair");
   TYPE_NIL = new_type("nil");
@@ -35,12 +37,32 @@ void init_types() {
   TYPE_MUTABLE_HASH = new_type("mutable_hash");
   TYPE_BOINK = new_type("boink");
   TYPE_HASHMAP = new_type("hashmap");
+
+  ta_is_equal = new_type_assoc();
+  default_type_assoc(ta_is_equal, is_pointer_equal);
+  set_type_assoc(ta_is_equal, TYPE_PAIR, is_pair_equal);
+  set_type_assoc(ta_is_equal, TYPE_NIL, is_pointer_equal);
+  set_type_assoc(ta_is_equal, TYPE_SYMBOL, is_symbol_equal);
+  set_type_assoc(ta_is_equal, TYPE_KEYWORD, is_keyword_equal);
+  set_type_assoc(ta_is_equal, TYPE_INT, is_int_equal);
+  set_type_assoc(ta_is_equal, TYPE_FUNC, is_pointer_equal);
+  set_type_assoc(ta_is_equal, TYPE_STRING, is_string_equal);
+  set_type_assoc(ta_is_equal, TYPE_VECTOR, is_vector_equal);
+  set_type_assoc(ta_is_equal, TYPE_BOOLEAN, is_pointer_equal);
+  set_type_assoc(ta_is_equal, TYPE_LAMBDA, is_pointer_equal);
+  set_type_assoc(ta_is_equal, TYPE_MUTABLE_HASH, is_pointer_equal);
+  set_type_assoc(ta_is_equal, TYPE_BOINK, is_pointer_equal);
+  set_type_assoc(ta_is_equal, TYPE_HASHMAP, is_pointer_equal);
 }
 
 /* nil == empty list */
 
 int is_nil (pointer p) {
   return p == NIL;
+}
+
+int is_pointer_equal(pointer p, pointer o) {
+  return p == o;
 }
 
 /* Pair */
@@ -179,6 +201,15 @@ pointer new_string(const char * s) {
 const char * get_string(pointer p) {
   check(is_string(p), "get_string: p is not a string");
   return get_other(p)->str;
+}
+
+int is_string_equal(pointer p, pointer o) {
+  if(p == o) {
+    return 1;
+  }
+  Other a = (Other)p;
+  Other b = (Other)o;
+  return strcmp(a->str, b->str) == 0;
 }
 
 /* Boolean */
@@ -343,53 +374,17 @@ pointer evaluate_let(pointer both, pointer env, pointer which) {
 /* Equality */
 
 int is_equal(pointer p, pointer o) {
-  Vector v1;
-  Vector v2;
-  int c, i;
   if(p == o) {
     return 1;
   }
   void * p_type = get_type(p);
   void * o_type = get_type(o);
-  Other a = (Other)p;
-  Other b = (Other)o;
   if(p_type != o_type) {
     return 0;
   } else {
-    if(p_type == TYPE_PAIR) {
-        return is_equal(car(p), car(o)) && is_equal(cdr(p), cdr(o));
-    }
-    if(p_type == TYPE_SYMBOL) {
-      return is_symbol_equal(p, o);
-    }
-    if(p_type == TYPE_KEYWORD) {
-      return is_keyword_equal(p, o);
-    }
-    if(p_type == TYPE_INT) {
-      return (a->int_num == b->int_num);
-    }
-    if(p_type == TYPE_FUNC) {
-      return (a->ffunc == b->ffunc);
-    }
-    if(p_type == TYPE_STRING) {
-      return strcmp(a->str, b->str) == 0;
-    }
-    if(p_type == TYPE_VECTOR) {
-      v1 = get_vector(p);
-      v2 = get_vector(o);
-      if(v1->count != v1->count) {
-        return 0;
-      } else {
-        c = v1->count;
-        for(i = 0; i < c; ++ i) {
-          if(!is_equal(v1->elems[i], v2->elems[i])) {
-            return 0;
-          }
-        }
-        return 1;
-      }
-    }
-    return 0;
+    int (* p_is_equal) (pointer, pointer);
+    p_is_equal = get_type_assoc(ta_is_equal, p_type);
+    return p_is_equal(p, o);
   }
   return 0; // make the static analyzers happy
 }

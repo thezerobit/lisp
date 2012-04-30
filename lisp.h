@@ -66,6 +66,7 @@ pointer SYMBOL_DEFMACRO;
 pointer SYMBOL_AMPERSAND;
 
 int is_nil (pointer p);
+int is_pointer_equal(pointer p, pointer o);
 pointer new_nil();
 
 /* Pair */
@@ -122,6 +123,7 @@ void test_func();
 int is_string(pointer p);
 pointer new_string(const char * s);
 const char * get_string(pointer p);
+int is_string_equal(pointer p, pointer o);
 
 /* Boolean */
 

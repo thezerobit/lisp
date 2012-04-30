@@ -8,6 +8,7 @@
 int is_int(pointer p);
 pointer new_int(int64_t num);
 int64_t get_int(pointer p);
+int is_int_equal(pointer p, pointer o);
 
 /* Operations */
 

@@ -20,6 +20,12 @@ int64_t get_int(pointer p) {
   return get_other(p)->int_num;
 }
 
+int is_int_equal(pointer p, pointer o) {
+  Other a = (Other)p;
+  Other b = (Other)o;
+  return (a->int_num == b->int_num);
+}
+
 /* Operations */
 
 pointer ff_plus(pointer args) {

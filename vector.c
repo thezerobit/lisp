@@ -42,6 +42,24 @@ pointer vector_get(pointer v, pointer offset) {
   return get_vector(v)->elems[n];
 }
 
+int is_vector_equal(pointer p, pointer o) {
+  Vector v1;
+  Vector v2;
+  int c, i;
+  v1 = get_vector(p);
+  v2 = get_vector(o);
+  if(v1->count != v1->count) {
+    return 0;
+  }
+  c = v1->count;
+  for(i = 0; i < c; ++ i) {
+    if(!is_equal(v1->elems[i], v2->elems[i])) {
+      return 0;
+    }
+  }
+  return 1;
+}
+
 pointer ff_vector_ref(pointer l) {
   assert(is_pair(l));
   pointer v = car(l);
