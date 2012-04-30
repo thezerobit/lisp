@@ -51,6 +51,7 @@ Things That Are Done
   
 * core macros
   * defun
+  * do (like progn or begin)
 
 * rudimentary REPL
 
@@ -64,7 +65,6 @@ TODO
 * NIL, SYMBOL\_\*, etc should be constant
   * replace get\_other(p)->type with get\_type(p)
 * split stuff into separate files...
-* begin / do / progn
 * set
   * language support
   * literal syntax
@@ -72,4 +72,10 @@ TODO
 * compilation
 * math stuff
 * namespaces
+* use shared libs dynamically (like Python's ctypes)
+* remove gio dependency
+* native regex (PCRE)
+* polymorphic dispatch
+* binary data support "bytes"
+* 
 

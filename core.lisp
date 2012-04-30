@@ -9,3 +9,4 @@
 (letrec (b (lambda (x) (if (<= x 0) x (b (- x 1))))) (a 100))
 
 (defmacro defun (name args & body) `(def ~name (lambda ~args ~@body)))
+(defmacro do (& forms) `((lambda () ~@forms)))
