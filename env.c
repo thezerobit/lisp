@@ -4,6 +4,7 @@
 #include "env.h"
 #include "symbol.h"
 #include "mutable_hash.h"
+#include "numbers.h"
 
 /* Inner Env */
 

@@ -4,7 +4,7 @@
 #include "lisp.h"
 
 typedef struct {
-  int type;
+  void * type;
   const char * name;
 } symbol;
 

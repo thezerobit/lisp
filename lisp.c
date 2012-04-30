@@ -19,6 +19,23 @@
 #include "vector.h"
 #include "hashmap.h"
 #include "numbers.h"
+#include "type.h"
+
+void init_types() {
+  TYPE_PAIR = new_type("pair");
+  TYPE_NIL = new_type("nil");
+  TYPE_SYMBOL = new_type("symbol");
+  TYPE_KEYWORD = new_type("keyword");
+  TYPE_INT = new_type("int");
+  TYPE_FUNC = new_type("func");
+  TYPE_STRING = new_type("string");
+  TYPE_VECTOR = new_type("vector");
+  TYPE_BOOLEAN = new_type("boolean");
+  TYPE_LAMBDA = new_type("lambda");
+  TYPE_MUTABLE_HASH = new_type("mutable_hash");
+  TYPE_BOINK = new_type("boink");
+  TYPE_HASHMAP = new_type("hashmap");
+}
 
 /* nil == empty list */
 
@@ -30,6 +47,10 @@ int is_nil (pointer p) {
 
 int is_pair(pointer p) {
   return get_type(p) == TYPE_PAIR;
+}
+
+int is_pair_equal(pointer p, pointer o) {
+  return is_equal(car(p), car(o)) && is_equal(cdr(p), cdr(o));
 }
 
 Pair get_pair(pointer p) {
@@ -107,8 +128,16 @@ Other get_other(pointer p) {
   return (Other)p;
 }
 
-int get_type(pointer p) {
+pointer get_type(pointer p) {
   return ((Other)p)->type;
+}
+
+const char * get_type_name(pointer p) {
+  return ((slang_type *)((Other)p)->type)->name;
+}
+
+int get_type_ord(pointer p) {
+  return ((slang_type *)((Other)p)->type)->ord;
 }
 
 /* Func */
@@ -320,55 +349,47 @@ int is_equal(pointer p, pointer o) {
   if(p == o) {
     return 1;
   }
-  int p_type = get_type(p);
-  int o_type = get_type(o);
+  void * p_type = get_type(p);
+  void * o_type = get_type(o);
   Other a = (Other)p;
   Other b = (Other)o;
   if(p_type != o_type) {
     return 0;
   } else {
-    switch(p_type) {
-      case TYPE_PAIR:
+    if(p_type == TYPE_PAIR) {
         return is_equal(car(p), car(o)) && is_equal(cdr(p), cdr(o));
-        break;
-      case TYPE_NIL:
-        /* two nil values should have same pointer value already */
-        check(0, "is_equal: two NILs with different value");
-        break;
-      case TYPE_SYMBOL:
-        return is_symbol_equal(p, o);
-        break;
-      case TYPE_KEYWORD:
-        return is_keyword_equal(p, o);
-        break;
-      case TYPE_INT:
-        return (a->int_num == b->int_num);
-        break;
-      case TYPE_FUNC:
-        return (a->ffunc == b->ffunc);
-      case TYPE_STRING:
-        return strcmp(a->str, b->str) == 0;
-      case TYPE_VECTOR:
-        v1 = get_vector(p);
-        v2 = get_vector(o);
-        if(v1->count != v1->count) {
-          return 0;
-        } else {
-          c = v1->count;
-          for(i = 0; i < c; ++ i) {
-            if(!is_equal(v1->elems[i], v2->elems[i])) {
-              return 0;
-            }
-          }
-          return 1;
-        }
-        break;
-      case TYPE_HASHMAP:
-        // TODO: compare key/vals
-      default:
-        return 0;
-        break;
     }
+    if(p_type == TYPE_SYMBOL) {
+      return is_symbol_equal(p, o);
+    }
+    if(p_type == TYPE_KEYWORD) {
+      return is_keyword_equal(p, o);
+    }
+    if(p_type == TYPE_INT) {
+      return (a->int_num == b->int_num);
+    }
+    if(p_type == TYPE_FUNC) {
+      return (a->ffunc == b->ffunc);
+    }
+    if(p_type == TYPE_STRING) {
+      return strcmp(a->str, b->str) == 0;
+    }
+    if(p_type == TYPE_VECTOR) {
+      v1 = get_vector(p);
+      v2 = get_vector(o);
+      if(v1->count != v1->count) {
+        return 0;
+      } else {
+        c = v1->count;
+        for(i = 0; i < c; ++ i) {
+          if(!is_equal(v1->elems[i], v2->elems[i])) {
+            return 0;
+          }
+        }
+        return 1;
+      }
+    }
+    return 0;
   }
   return 0; // make the static analyzers happy
 }
@@ -424,48 +445,30 @@ void test_is_equal() {
 }
 
 int hash_thing(pointer p) {
-  int t = get_type(p);
+  pointer t = get_type(p);
   int64_t i;
-  switch(t) {
-    case TYPE_PAIR:
-      // TODO: fix
-      return g_direct_hash(p);
-    case TYPE_NIL:
-      return TYPE_NIL;
-    case TYPE_SYMBOL:
-      return g_str_hash(get_symbol(p)->name);
-    case TYPE_KEYWORD:
-      return g_str_hash(get_keyword(p)->name) + 1;
-    case TYPE_INT:
-      i = get_int(p);
-      return (int)(i & 0xFFFF);
-    case TYPE_FUNC:
-      return g_direct_hash(p);
-    case TYPE_STRING:
-      return g_str_hash(get_string(p)) + 2;
-    case TYPE_VECTOR:
-      // TODO: fix
-      return g_direct_hash(p);
-    case TYPE_BOOLEAN:
-      return g_direct_hash(p);
-    case TYPE_LAMBDA:
-      return g_direct_hash(p);
-    case TYPE_MUTABLE_HASH:
-      // TODO: fix
-      return g_direct_hash(p);
-    case TYPE_HASHMAP:
-      // TODO: fix
-      return g_direct_hash(p);
-    default:
-      return g_direct_hash(p);
+  if(t == TYPE_SYMBOL) {
+    return g_str_hash(get_symbol(p)->name);
   }
+  if(t == TYPE_KEYWORD) {
+    return g_str_hash(get_keyword(p)->name) + 1;
+  }
+  if(t == TYPE_INT) {
+    i = get_int(p);
+    return (int)(i & 0xFFFF);
+  }
+  if(t == TYPE_STRING) {
+    return g_str_hash(get_string(p)) + 2;
+  }
+  // TODO: implement properly for other types
+  return g_direct_hash(p);
 }
 
 /* evaluate */
 
 void init_globals() {
   init_INodes(is_equal, hash_thing); /* PersistentHashMap init */
-  NIL = GC_MALLOC(sizeof(int));
+  NIL = GC_MALLOC(sizeof(other));
   ((Other)NIL)->type = TYPE_NIL;
   SYMBOL_QUOTE = new_symbol("quote");
   SYMBOL_QUASIQUOTE = new_symbol("quasiquote");
@@ -617,18 +620,20 @@ pointer evaluate(pointer form, pointer env) {
 
 pointer evaluate_inner(pointer form, pointer env, int is_tail) {
   Other o = get_other(form);
-  switch(o->type) {
-    case TYPE_PAIR:
-      return evaluate_pair(form, env, is_tail);
-    case TYPE_SYMBOL:
-      return lookup_env(env, form);
-    case TYPE_VECTOR:
-      return evaluate_vector(form, env);
-    case TYPE_HASHMAP:
-      return evaluate_hashmap(form, env);
-    default:
-      return form;
+  pointer t = o->type;
+  if(t == TYPE_PAIR) {
+    return evaluate_pair(form, env, is_tail);
   }
+  if(t == TYPE_SYMBOL) {
+    return lookup_env(env, form);
+  }
+  if(t == TYPE_VECTOR) {
+    return evaluate_vector(form, env);
+  }
+  if(t == TYPE_HASHMAP) {
+    return evaluate_hashmap(form, env);
+  }
+  return form;
 }
 
 pointer quasiquote(pointer form, pointer env) {
@@ -1042,65 +1047,73 @@ void print_thing(pointer p) {
   pointer n;
   int i;
   Vector v;
-  switch(get_type(p)) {
-    case TYPE_PAIR:
-      printf("(");
-      n = p;
-      do {
-        print_thing(car(n));
-        n = cdr(n);
-        if(is_pair(n)) {
-          printf(" ");
-        }
-      } while (is_pair(n));
-      printf(")");
-      break;
-    case TYPE_NIL:
-      printf("()");
-      break;
-    case TYPE_SYMBOL:
-      printf("%s", get_symbol(p)->name);
-      break;
-    case TYPE_KEYWORD:
-      printf(":%s", get_symbol(p)->name);
-      break;
-    case TYPE_INT:
-      printf("%" PRId64, get_int(p));
-      break;
-    case TYPE_FUNC:
-      printf("<foreign function>");
-      break;
-    case TYPE_STRING:
-      printf("\"%s\"", get_string(p));
-      break;
-    case TYPE_VECTOR:
-      printf("[");
-      v = get_vector(p);
-      for(i = 0; i < v->count; ++ i) {
-        print_thing(v->elems[i]);
-        if(i < v->count - 1) {
-          printf(" ");
-        }
+  pointer t = get_type(p);
+  if(t == TYPE_PAIR) {
+    printf("(");
+    n = p;
+    do {
+      print_thing(car(n));
+      n = cdr(n);
+      if(is_pair(n)) {
+        printf(" ");
       }
-      printf("]");
-      break;
-    case TYPE_BOOLEAN:
-      if(p == BOOLEAN_TRUE) {
-        printf("true");
-      } else {
-        printf("false");
-      }
-      break;
-    case TYPE_MUTABLE_HASH:
-      print_mutable_hash(p);
-      break;
-    case TYPE_HASHMAP:
-      print_hashmap(p);
-      break;
-    default:
-      printf("<unknown object %d>", get_type(p));
-      break;
+    } while (is_pair(n));
+    printf(")");
+    return;
   }
+  if(t == TYPE_NIL) {
+    printf("()");
+    return;
+  }
+  if(t == TYPE_SYMBOL) {
+    printf("%s", get_symbol(p)->name);
+    return;
+  }
+  if(t == TYPE_KEYWORD) {
+    printf(":%s", get_symbol(p)->name);
+    return;
+  }
+  if(t == TYPE_INT) {
+    printf("%" PRId64, get_int(p));
+    return;
+  }
+  if(t == TYPE_FUNC) {
+    printf("<foreign function>");
+    return;
+  }
+  if(t == TYPE_STRING) {
+    printf("\"%s\"", get_string(p));
+    return;
+  }
+  if(t == TYPE_VECTOR) {
+    printf("[");
+    v = get_vector(p);
+    for(i = 0; i < v->count; ++ i) {
+      print_thing(v->elems[i]);
+      if(i < v->count - 1) {
+        printf(" ");
+      }
+    }
+    printf("]");
+    return;
+  }
+  if(t == TYPE_BOOLEAN) {
+    if(p == BOOLEAN_TRUE) {
+      printf("true");
+    } else {
+      printf("false");
+    }
+    return;
+  }
+  if(t == TYPE_MUTABLE_HASH) {
+    print_mutable_hash(p);
+    return;
+  }
+  if(t == TYPE_HASHMAP) {
+    print_hashmap(p);
+    return;
+  }
+  printf("<object: %s>", get_type_name(p));
 }
 
 pointer ff_print(pointer args) {
@@ -1295,6 +1308,7 @@ void do_repl(pointer env) {
 
 int main(int argc, char * argv[]) {
   init_gc();
+  init_types();
   g_type_init();
   init_symbols();
   init_keywords();

@@ -1,6 +1,7 @@
 #include "gc.h"
 #include <assert.h>
 #include "vector.h"
+#include "numbers.h"
 
 
 /* Vector */

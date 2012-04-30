@@ -7,7 +7,7 @@
 /* Map */
 
 typedef struct {
-  int type;
+  void * type;
   PersistentHashMap * phm;
 } hashmap;
 

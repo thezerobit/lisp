@@ -6,7 +6,7 @@
 /* Vector */
 
 typedef struct {
-  int type;
+  void * type;
   int count;
   pointer * elems;
 } vector;

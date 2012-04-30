@@ -5,8 +5,9 @@
 #include <inttypes.h>
 #include <glib.h>
 
-#define TYPE_MASK    (0b011)
+/* #define TYPE_MASK    (0b011) */
 
+/*
 #define TYPE_PAIR    0
 #define TYPE_NIL     1
 #define TYPE_SYMBOL  2
@@ -20,10 +21,28 @@
 #define TYPE_MUTABLE_HASH 10
 #define TYPE_BOINK   11
 #define TYPE_HASHMAP 12
+#define NUM_BUILTIN_TYPES 13;
+*/
 
 typedef void * pointer;
 
+pointer TYPE_PAIR;
+pointer TYPE_NIL;
+pointer TYPE_SYMBOL;
+pointer TYPE_KEYWORD;
+pointer TYPE_INT;
+pointer TYPE_FUNC;
+pointer TYPE_STRING;
+pointer TYPE_VECTOR;
+pointer TYPE_BOOLEAN;
+pointer TYPE_LAMBDA;
+pointer TYPE_MUTABLE_HASH;
+pointer TYPE_BOINK;
+pointer TYPE_HASHMAP;
+
 typedef GHashTable * MutableHash;
+
+void init_types();
 
 /* nil */
 
@@ -52,7 +71,7 @@ pointer new_nil();
 /* Pair */
 
 typedef struct {
-  int type;
+  void * type;
   pointer car;
   pointer cdr;
 } pair;
@@ -60,6 +79,7 @@ typedef struct {
 typedef pair * Pair;
 
 int is_pair(pointer p);
+int is_pair_equal(pointer p, pointer o);
 Pair get_pair(pointer p);
 pointer new_pair(pointer car, pointer cdr);
 pointer car(pointer p);
@@ -74,7 +94,7 @@ pointer ff_cons(pointer p);
 /* Other */
 
 typedef struct {
-  int type;
+  void * type;
   union {
     void * data;
     int64_t int_num;
@@ -87,8 +107,8 @@ typedef struct {
 typedef other * Other;
 
 Other get_other(pointer p);
-int get_type(pointer p);
-
+pointer get_type(pointer p);
+const char * get_type_name(pointer p);
 
 /* Func */
 
@@ -112,7 +132,7 @@ int get_boolean(pointer p);
 /* Lambda */
 
 typedef struct {
-  int type;
+  void * type;
   pointer arglist;
   pointer body;
   pointer env;
@@ -129,7 +149,7 @@ pointer call_lambda(Lambda l, pointer arglist);
 /* Boink */
 
 typedef struct {
-  int type;
+  void * type;
   Lambda l;
   pointer args;
 } boink;
