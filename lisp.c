@@ -20,6 +20,7 @@
 #include "hashmap.h"
 #include "numbers.h"
 #include "type.h"
+#include "method.h"
 
 type_assoc * ta_is_equal;
 
@@ -37,6 +38,8 @@ void init_types() {
   TYPE_MUTABLE_HASH = new_type("mutable_hash");
   TYPE_BOINK = new_type("boink");
   TYPE_HASHMAP = new_type("hashmap");
+  TYPE_CALLABLE = new_type("callable");
+  TYPE_METHOD = new_type("method");
 
   ta_is_equal = new_type_assoc();
   default_type_assoc(ta_is_equal, is_pointer_equal);
@@ -596,10 +599,31 @@ pointer evaluate_pair(pointer form, pointer env, int is_tail) {
     Lambda lam = get_lambda(first_eval);
     pointer args = evaluate_list(cdr(form), env);
     if(is_tail) {
-      // TODO: return boink to be captured in call_lambda for tail recursion
       return new_boink(lam, args);
     } else {
       return call_lambda(lam, args);
+    }
+  }
+  if(is_method(first_eval)) {
+    Method m = get_method(first_eval);
+    pointer args = evaluate_list(cdr(form), env);
+    pointer first_arg = car(args);
+    Callable c = method_get_callable(m, get_type(first_arg));
+    Lambda lam;
+    switch(c->callable_type) {
+    case CALLABLE_LAMBDA:
+      if(is_tail) {
+        return new_boink(lam, args);
+      } else {
+        return call_lambda(lam, args);
+      }
+      break;
+    case CALLABLE_FFUNC:
+      return call_func(first_eval, args);
+      break;
+    default:
+      assert(0 == "Argh, poorly formed method/callable.");
+      break;
     }
   }
   /* printf("first: "); print_thing(first); printf("\n"); */
@@ -1332,3 +1356,22 @@ int main(int argc, char * argv[]) {
   return 0;
 }
 
+/* callable */
+
+Callable new_callable(int t, void * p) {
+  Callable c = (Callable)GC_MALLOC(sizeof(callable));
+  c->type = TYPE_CALLABLE;
+  c->callable_type = t;
+  switch(t) {
+  case CALLABLE_LAMBDA:
+    c->lam = get_lambda(p);
+    break;
+  case CALLABLE_FFUNC:
+    c->ffunc = p;
+    break;
+  default:
+    check(0, "new_callable: invalid callable type");
+    break;
+  }
+  return c;
+}

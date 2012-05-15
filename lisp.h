@@ -5,24 +5,6 @@
 #include <inttypes.h>
 #include <glib.h>
 
-/* #define TYPE_MASK    (0b011) */
-
-/*
-#define TYPE_PAIR    0
-#define TYPE_NIL     1
-#define TYPE_SYMBOL  2
-#define TYPE_KEYWORD 3
-#define TYPE_INT     4
-#define TYPE_FUNC    5
-#define TYPE_STRING  6
-#define TYPE_VECTOR  7
-#define TYPE_BOOLEAN 8
-#define TYPE_LAMBDA  9
-#define TYPE_MUTABLE_HASH 10
-#define TYPE_BOINK   11
-#define TYPE_HASHMAP 12
-#define NUM_BUILTIN_TYPES 13;
-*/
 
 typedef void * pointer;
 
@@ -39,6 +21,8 @@ pointer TYPE_LAMBDA;
 pointer TYPE_MUTABLE_HASH;
 pointer TYPE_BOINK;
 pointer TYPE_HASHMAP;
+pointer TYPE_CALLABLE;
+pointer TYPE_METHOD;
 
 typedef GHashTable * MutableHash;
 
@@ -248,5 +232,24 @@ pointer build_core_env();
 
 void init_gc();
 void load_file(char * filename, pointer env);
+
+/* callable */
+
+#define CALLABLE_LAMBDA 1
+#define CALLABLE_FFUNC  2
+
+typedef struct {
+  void * type;
+  int callable_type;
+  union {
+    Lambda lam;
+    pointer (*ffunc)(pointer);
+  };
+} callable;
+
+typedef callable * Callable;
+
+Callable new_callable(int t, void * p);
+pointer invoke_callable(Callable c, pointer args);
 
 #endif /* LISP_H */

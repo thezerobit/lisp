@@ -63,7 +63,6 @@ TODO
 * Better error handling
 * Ref type
 * NIL, SYMBOL\_\*, etc should be constant
-  * replace get\_other(p)->type with get\_type(p)
 * split stuff into separate files...
 * set
   * language support
@@ -77,5 +76,3 @@ TODO
 * native regex (PCRE)
 * polymorphic dispatch
 * binary data support "bytes"
-* 
-
